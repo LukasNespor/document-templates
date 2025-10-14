@@ -52,10 +52,10 @@ export async function PUT(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Extract merge fields from new template
-    let mergeFields: string[];
+    // Extract fields from new template
+    let fields: string[];
     try {
-      mergeFields = extractMergeFields(buffer);
+      fields = extractMergeFields(buffer);
     } catch (error) {
       return NextResponse.json(
         { error: "Nepodařilo se zpracovat Word dokument. Ujistěte se, že se jedná o platný soubor .docx" },
@@ -67,14 +67,14 @@ export async function PUT(
     const fileName = `${id}.docx`;
     const blobUrl = await uploadBlob(fileName, buffer);
 
-    // Update template metadata with new merge fields
+    // Update template metadata with new fields
     await updateTemplate(id, {
-      mergeFields,
+      fields,
       blobUrl,
     });
 
     return NextResponse.json(
-      { message: "Šablona úspěšně nahrána znovu", mergeFields },
+      { message: "Šablona úspěšně nahrána znovu", fields },
       { status: 200 }
     );
   } catch (error) {

@@ -58,10 +58,11 @@ Passwords are hashed using bcrypt (one-way encryption) and cannot be recovered.
 
 ### Storage Architecture
 
-- **Azure Blob Storage**: Stores actual .docx template files in container named "word-templates"
+- **Azure Blob Storage**: Stores actual .docx template files in container named "document-templates"
 - **Azure Table Storage**:
-  - `WordTemplates` table: Stores template metadata with partition key "templates" and row key as template ID
-  - `WordTemplateUsers` table: Stores user accounts with partition key "users" and row key as user ID
+  - `DocumentTemplates` table: Stores template metadata with partition key "templates" and row key as template ID
+  - `DocumentTemplateUsers` table: Stores user accounts with partition key "users" and row key as user ID
+  - `DocumentTemplateStatistics` table: Stores user statistics with partition key "statistics" and row key as user ID
 
 ### Core Libraries
 
@@ -74,7 +75,7 @@ The application's core functionality is built around key modules in the `lib/` d
   - `isAuthenticated()`: Checks if user is logged in
   - `getCurrentUser()`: Gets current user from session
 - **azure-users.ts**: User management in Azure Table Storage
-  - `saveUser()`: Saves user to WordTemplateUsers table
+  - `saveUser()`: Saves user to DocumentTemplateUsers table
   - `getUserByUsername()`: Retrieves user by username
   - `getUserById()`: Retrieves user by ID
 - **azure-blob.ts**: Manages Blob Storage operations (upload/download .docx files)
@@ -132,14 +133,15 @@ All shared types are defined in `types/index.ts`:
 - Field matching is **case-insensitive** (`{{Name}}` = `{{name}}` = `{{NAME}}`)
 - System field `{{dnes}}` is automatically populated with current date in Czech format (e.g., "14. října 2025")
 - Field names are extracted by parsing the document XML for `{{...}}` patterns
-- All unique fields (except `{{dnes}}`) are stored in the `mergeFields` array in Azure Table Storage
+- All unique fields (except `{{dnes}}`) are stored in the `fields` column in Azure Table Storage
 
 ### Azure Storage Naming
 
-- Blob Storage container: `word-templates` (auto-created if not exists)
+- Blob Storage container: `document-templates` (auto-created if not exists)
 - Table Storage tables:
-  - `WordTemplates` (auto-created if not exists) - Template metadata
-  - `WordTemplateUsers` (auto-created if not exists) - User accounts
+  - `DocumentTemplates` (auto-created if not exists) - Template metadata
+  - `DocumentTemplateUsers` (auto-created if not exists) - User accounts
+  - `DocumentTemplateStatistics` (auto-created if not exists) - User statistics
 - Template files are named with UUID: `{uuid}.docx`
 - User IDs are UUIDs
 

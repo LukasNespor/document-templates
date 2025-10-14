@@ -10,7 +10,7 @@ import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 import EditTemplateDialog from "@/components/EditTemplateDialog";
 import BulkGenerateDialog from "@/components/BulkGenerateDialog";
 import TemplateForm from "@/components/TemplateForm";
-import { Template, MergeFieldValue, Statistics } from "@/types";
+import { Template, FieldValue, Statistics } from "@/types";
 
 export default function Home() {
   const router = useRouter();
@@ -114,10 +114,34 @@ export default function Home() {
   const loadStatistics = async () => {
     try {
       const response = await fetch("/api/statistics");
+
+      if (!response.ok) {
+        console.error("Failed to load statistics:", response.statusText);
+        // Set default statistics on error
+        setStatistics({
+          currentTemplateCount: 0,
+          totalTemplatesCreated: 0,
+          totalFilesGenerated: 0,
+          totalFieldsFilled: 0,
+          lastGenerationDate: null,
+          savedTimeSeconds: 0,
+        });
+        return;
+      }
+
       const data = await response.json();
       setStatistics(data);
     } catch (error) {
       console.error("Failed to load statistics:", error);
+      // Set default statistics on error
+      setStatistics({
+        currentTemplateCount: 0,
+        totalTemplatesCreated: 0,
+        totalFilesGenerated: 0,
+        totalFieldsFilled: 0,
+        lastGenerationDate: null,
+        savedTimeSeconds: 0,
+      });
     }
   };
 
@@ -158,7 +182,7 @@ export default function Home() {
 
   const handleGenerate = async (
     templateId: string,
-    mergeFields: MergeFieldValue[],
+    fields: FieldValue[],
     fileName: string
   ) => {
     const response = await fetch("/api/templates/generate", {
@@ -166,7 +190,7 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ templateId, mergeFields, fileName }),
+      body: JSON.stringify({ templateId, fields, fileName }),
     });
 
     if (!response.ok) {

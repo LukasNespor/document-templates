@@ -87,16 +87,16 @@ export default function BulkGenerateDialog({
 
     // First column is filename column
     const filenameColumn = headers[0];
-    const csvMergeFields = headers.slice(1);
+    const csvFields = headers.slice(1);
 
     // Filter out "dnes" from required fields
-    const requiredFields = template.mergeFields.filter(
+    const requiredFields = template.fields.filter(
       (field) => field.toLowerCase() !== "dnes"
     );
 
     // Check for missing fields
     const missingFields = requiredFields.filter(
-      (field) => !csvMergeFields.includes(field)
+      (field) => !csvFields.includes(field)
     );
 
     if (missingFields.length > 0) {
@@ -106,8 +106,8 @@ export default function BulkGenerateDialog({
     }
 
     // Check for extra columns
-    const extraColumns = csvMergeFields.filter(
-      (col) => !template.mergeFields.includes(col)
+    const extraColumns = csvFields.filter(
+      (col) => !template.fields.includes(col)
     );
 
     if (extraColumns.length > 0) {
@@ -239,7 +239,7 @@ export default function BulkGenerateDialog({
             <div className="text-sm text-gray-700 space-y-1">
               <div>Oddělení středníkem (;)</div>
               <div>První sloupec: Název souboru</div>
-              <div>Další sloupce: {template.mergeFields.join(", ")}</div>
+              <div>Další sloupce: {template.fields.join(", ")}</div>
             </div>
           </div>
 

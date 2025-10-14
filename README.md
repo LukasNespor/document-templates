@@ -1,6 +1,6 @@
-# Word Templates
+# Document Templates
 
-A modern Next.js application for creating Word documents from templates with merge fields. Upload Word templates, organize them by groups, fill in merge fields, and generate customized documents.
+A modern Next.js application for creating Word documents from templates with field placeholders. Upload Word templates, organize them by groups, fill in field values, and generate customized documents.
 
 ## Features
 
@@ -8,7 +8,7 @@ A modern Next.js application for creating Word documents from templates with mer
 - Upload Word (.docx) templates with `{{field name}}` placeholders
 - Automatic detection of field placeholders in templates
 - Organize templates by groups with a collapsible sidebar
-- Fill in merge field values through an intuitive form
+- Fill in field values through an intuitive form
 - Generate Word documents with merged data
 - Store templates in Azure Blob Storage
 - Store metadata in Azure Table Storage
@@ -17,7 +17,7 @@ A modern Next.js application for creating Word documents from templates with mer
 
 ## Prerequisites
 
-- Node.js 18 or higher
+- Node.js 24 or higher
 - npm or yarn
 - Azure Storage Account (for Blob and Table Storage)
 
@@ -89,6 +89,60 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 The application will redirect you to the login page. Use the credentials you created in step 4.
 
+## Running with Docker
+
+### Using Docker Compose (Recommended)
+
+The easiest way to run the application with Docker:
+
+1. Make sure you have [Docker](https://www.docker.com/get-started) and Docker Compose installed
+2. Set up your `.env` file with Azure credentials (see step 3 above)
+3. Build and run the container:
+
+```bash
+docker-compose up -d
+```
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+To stop the container:
+```bash
+docker-compose down
+```
+
+To view logs:
+```bash
+docker-compose logs -f
+```
+
+### Using Docker Directly
+
+You can also build and run the Docker image directly:
+
+```bash
+# Build the image
+docker build -t document-templates .
+
+# Run the container
+docker run -d \
+  -p 3000:3000 \
+  --name document-templates \
+  --env-file .env \
+  document-templates
+```
+
+### Creating Users in Docker
+
+To create a user when running in Docker:
+
+```bash
+# If using docker-compose
+docker-compose exec document-templates npx tsx scripts/create-user.ts <username> <password>
+
+# If using docker run
+docker exec -it document-templates npx tsx scripts/create-user.ts <username> <password>
+```
+
 ## Authentication & Security
 
 ### How Authentication Works
@@ -96,7 +150,7 @@ The application will redirect you to the login page. Use the credentials you cre
 - **Secure Password Storage**: Passwords are hashed using bcrypt with 10 salt rounds. The hash is a one-way encryption that cannot be reversed to retrieve the original password.
 - **Session Management**: User sessions are secured using iron-session with encrypted cookies.
 - **Protected Routes**: All application routes require authentication. Unauthenticated users are redirected to the login page.
-- **User Storage**: User accounts are stored in Azure Table Storage in a dedicated `WordTemplateUsers` table.
+- **User Storage**: User accounts are stored in Azure Table Storage in a dedicated `DocumentTemplateUsers` table.
 
 ### Managing Users
 
@@ -127,14 +181,14 @@ Note: There is no admin UI for user management yet. You'll need to use this scri
 ### Generating Documents
 
 1. Select a template from the sidebar
-2. Fill in all merge field values in the form
+2. Fill in all field values in the form
 3. Click "Generate Document"
 4. The generated Word document will download automatically
 
 ## Project Structure
 
 ```
-word-templates/
+document-templates/
 ├── app/
 │   ├── api/
 │   │   ├── auth/               # Authentication API routes
@@ -156,7 +210,7 @@ word-templates/
 │   ├── Sidebar.tsx             # Template sidebar
 │   ├── HelpDialog.tsx          # Help modal
 │   ├── UploadTemplateDialog.tsx # Upload modal
-│   └── TemplateForm.tsx        # Merge field form
+│   └── TemplateForm.tsx        # Field value form
 ├── lib/
 │   ├── auth.ts                 # Authentication utilities (bcrypt, sessions)
 │   ├── azure-blob.ts           # Blob Storage utilities
@@ -191,12 +245,18 @@ npm start
 
 ## Deployment
 
-This application can be deployed to any platform that supports Next.js:
+This application can be deployed to any platform that supports Next.js or Docker:
 
+**Next.js Platforms:**
 - Vercel
-- Azure App Service
-- AWS Amplify
 - Netlify
+- AWS Amplify
+
+**Docker/Container Platforms:**
+- Azure App Service (with Docker)
+- AWS ECS/Fargate
+- Google Cloud Run
+- Any VPS with Docker support
 
 Make sure to set the environment variables in your deployment platform.
 

@@ -6,7 +6,7 @@ import { parseCsvFile, handleDuplicateFilenames } from "@/lib/csv-processor";
 import { createZipFile, DocumentFile } from "@/lib/zip-generator";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { getCurrentUser } from "@/lib/auth";
-import { MergeFieldValue } from "@/types";
+import { FieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const csvContent = await csvFile.text();
 
     // Parse and validate CSV
-    const validationResult = parseCsvFile(csvContent, template.mergeFields);
+    const validationResult = parseCsvFile(csvContent, template.fields);
 
     if (!validationResult.isValid || !validationResult.data) {
       return NextResponse.json(
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
       const row = rowsWithUniqueFilenames[i];
 
       try {
-        // Convert row fields to MergeFieldValue array
-        const mergeFields: MergeFieldValue[] = Object.entries(row.fields).map(
+        // Convert row fields to FieldValue array
+        const fields: FieldValue[] = Object.entries(row.fields).map(
           ([field, value]) => ({
             field,
             value,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Generate document
-        const generatedBuffer = generateDocument(templateBuffer, mergeFields);
+        const generatedBuffer = generateDocument(templateBuffer, fields);
 
         documents.push({
           filename: row.filename,
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     const zipBuffer = await createZipFile(documents);
 
     // Update statistics (don't await to avoid blocking the response)
-    incrementFilesGenerated(currentUser.userId, documents.length, template.mergeFields.length).catch(
+    incrementFilesGenerated(currentUser.userId, documents.length, template.fields.length).catch(
       (error) => console.error("Failed to update statistics:", error)
     );
 

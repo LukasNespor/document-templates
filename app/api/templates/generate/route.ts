@@ -4,7 +4,7 @@ import { downloadBlob } from "@/lib/azure-blob";
 import { generateDocument } from "@/lib/docx-processor";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { getCurrentUser } from "@/lib/auth";
-import { MergeFieldValue } from "@/types";
+import { FieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,15 +18,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { templateId, mergeFields, fileName } = body as {
+    const { templateId, fields, fileName } = body as {
       templateId: string;
-      mergeFields: MergeFieldValue[];
+      fields: FieldValue[];
       fileName?: string;
     };
 
-    if (!templateId || !mergeFields) {
+    if (!templateId || !fields) {
       return NextResponse.json(
-        { error: "ID šablony a slučovací pole jsou povinné" },
+        { error: "ID šablony a pole jsou povinné" },
         { status: 400 }
       );
     }
@@ -46,11 +46,11 @@ export async function POST(request: NextRequest) {
     // Download template from Azure Blob Storage
     const templateBuffer = await downloadBlob(blobFileName);
 
-    // Generate document with merge fields
-    const generatedBuffer = generateDocument(templateBuffer, mergeFields);
+    // Generate document with fields
+    const generatedBuffer = generateDocument(templateBuffer, fields);
 
     // Update statistics (don't await to avoid blocking the response)
-    incrementFilesGenerated(currentUser.userId, 1, template.mergeFields.length).catch((error) =>
+    incrementFilesGenerated(currentUser.userId, 1, template.fields.length).catch((error) =>
       console.error("Failed to update statistics:", error)
     );
 

@@ -1,0 +1,24 @@
+services:
+  document-templates:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: document-templates:latest
+    container_name: document-templates
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+      - SESSION_SECRET=${SESSION_SECRET}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/auth/session"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -1,6 +1,6 @@
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import { MergeFieldValue } from "@/types";
+import { FieldValue } from "@/types";
 
 export function extractMergeFields(buffer: Buffer): string[] {
   const zip = new PizZip(buffer);
@@ -67,13 +67,13 @@ export function extractMergeFields(buffer: Buffer): string[] {
 
 export function generateDocument(
   templateBuffer: Buffer,
-  mergeFields: MergeFieldValue[]
+  fields: FieldValue[]
 ): Buffer {
   const zip = new PizZip(templateBuffer);
 
-  // Create data object from merge fields (case-insensitive keys)
+  // Create data object from fields (case-insensitive keys)
   const data: Record<string, string> = {};
-  mergeFields.forEach((field) => {
+  fields.forEach((field) => {
     data[field.field.toLowerCase()] = field.value;
   });
 

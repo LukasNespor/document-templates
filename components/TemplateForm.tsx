@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { FileText, FolderOpen, StickyNote, Edit3, Wand2, AlertCircle, Loader2, Download, Edit2, Trash2, Upload, FileSpreadsheet } from "lucide-react";
-import { Template, MergeFieldValue } from "@/types";
+import { Template, FieldValue } from "@/types";
 
 interface TemplateFormProps {
   template: Template;
-  onGenerate: (templateId: string, mergeFields: MergeFieldValue[], fileName: string) => Promise<void>;
+  onGenerate: (templateId: string, fields: FieldValue[], fileName: string) => Promise<void>;
   onEditTemplate: (template: Template) => void;
   onDeleteTemplate: (template: Template) => void;
   onReuploadTemplate: (templateId: string, file: File) => Promise<void>;
@@ -25,7 +25,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
   // Initialize field values when template changes
   useEffect(() => {
     const initialValues: Record<string, string> = {};
-    template.mergeFields.forEach((field) => {
+    template.fields.forEach((field) => {
       initialValues[field] = "";
     });
     setFieldValues(initialValues);
@@ -44,8 +44,8 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
     e.preventDefault();
     setError("");
 
-    // Convert to array of merge field values
-    const mergeFields: MergeFieldValue[] = Object.entries(fieldValues).map(
+    // Convert to array of field values
+    const fields: FieldValue[] = Object.entries(fieldValues).map(
       ([field, value]) => ({
         field,
         value,
@@ -55,7 +55,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
     setIsGenerating(true);
 
     try {
-      await onGenerate(template.id, mergeFields, fileName);
+      await onGenerate(template.id, fields, fileName);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Nepodařilo se vygenerovat dokument"
@@ -186,7 +186,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
         </div>
 
         {/* Bulk Generate Button - Prominent at top */}
-        {onBulkGenerate && template.mergeFields.length > 0 && (
+        {onBulkGenerate && template.fields.length > 0 && (
           <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -214,7 +214,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6 mb-8">
-          {template.mergeFields.length > 0 && (
+          {template.fields.length > 0 && (
             <>
               {/* Filename input */}
               <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-200">
@@ -246,7 +246,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
             </>
           )}
 
-          {template.mergeFields.length === 0 ? (
+          {template.fields.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <div className="bg-gray-200 p-4 rounded-full mb-3">
                 <FileText className="w-8 h-8 text-gray-400" />
@@ -270,7 +270,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {template.mergeFields.map((field) => (
+              {template.fields.map((field) => (
                 <div key={field} className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 transition-all">
                   <label
                     htmlFor={field}
@@ -305,7 +305,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
           {/* Generate Single Document Button */}
           <button
             type="submit"
-            disabled={isGenerating || template.mergeFields.length === 0}
+            disabled={isGenerating || template.fields.length === 0}
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3.5 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-lg"
           >
             {isGenerating ? (

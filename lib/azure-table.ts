@@ -1,7 +1,7 @@
 import { TableClient, AzureNamedKeyCredential } from "@azure/data-tables";
 import { Template } from "@/types";
 
-const tableName = "WordTemplates";
+const tableName = "DocumentTemplates";
 
 let tableClient: TableClient;
 
@@ -10,6 +10,16 @@ export function getTableClient(): TableClient {
     // Read environment variables when the function is called, not at module load time
     const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || "";
     const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY || "";
+
+    if (!accountName || !accountKey) {
+      console.error("Azure Storage credentials not configured!", {
+        hasAccountName: !!accountName,
+        hasAccountKey: !!accountKey,
+      });
+      throw new Error("Azure Storage credentials not configured");
+    }
+
+    console.log("Initializing Table Client for DocumentTemplates with account:", accountName);
 
     const credential = new AzureNamedKeyCredential(accountName, accountKey);
     tableClient = new TableClient(
@@ -23,9 +33,24 @@ export function getTableClient(): TableClient {
 
 export async function ensureTableExists(): Promise<void> {
   const tableClient = getTableClient();
-  await tableClient.createTable().catch(() => {
-    // Table already exists
-  });
+  try {
+    console.log("Attempting to create DocumentTemplates table...");
+    const result = await tableClient.createTable();
+    console.log("DocumentTemplates table created successfully:", result);
+  } catch (error: any) {
+    // Only ignore "table already exists" errors
+    if (error?.statusCode === 409 || error?.message?.includes("TableAlreadyExists")) {
+      console.log("DocumentTemplates table already exists");
+    } else {
+      console.error("Failed to create templates table:", {
+        statusCode: error?.statusCode,
+        message: error?.message,
+        details: error?.details,
+        code: error?.code,
+      });
+      throw error;
+    }
+  }
 }
 
 export async function saveTemplate(template: Template): Promise<void> {
@@ -39,7 +64,7 @@ export async function saveTemplate(template: Template): Promise<void> {
     note: template.note,
     group: template.group,
     blobUrl: template.blobUrl,
-    mergeFields: JSON.stringify(template.mergeFields),
+    fields: JSON.stringify(template.fields),
     createdAt: template.createdAt,
     uploadedBy: template.uploadedBy,
   };
@@ -58,7 +83,7 @@ export async function getTemplate(id: string): Promise<Template | null> {
       note: entity.note as string,
       group: entity.group as string,
       blobUrl: entity.blobUrl as string,
-      mergeFields: JSON.parse(entity.mergeFields as string),
+      fields: JSON.parse(entity.fields as string),
       createdAt: entity.createdAt as string,
       uploadedBy: entity.uploadedBy as string,
     };
@@ -68,48 +93,68 @@ export async function getTemplate(id: string): Promise<Template | null> {
 }
 
 export async function getAllTemplates(): Promise<Template[]> {
+  await ensureTableExists();
   const tableClient = getTableClient();
   const templates: Template[] = [];
 
-  const entities = tableClient.listEntities({
-    queryOptions: { filter: `PartitionKey eq 'templates'` },
-  });
-
-  for await (const entity of entities) {
-    templates.push({
-      id: entity.rowKey as string,
-      name: entity.name as string,
-      note: entity.note as string,
-      group: entity.group as string,
-      blobUrl: entity.blobUrl as string,
-      mergeFields: JSON.parse(entity.mergeFields as string),
-      createdAt: entity.createdAt as string,
-      uploadedBy: entity.uploadedBy as string,
+  try {
+    const entities = tableClient.listEntities({
+      queryOptions: { filter: `PartitionKey eq 'templates'` },
     });
+
+    for await (const entity of entities) {
+      templates.push({
+        id: entity.rowKey as string,
+        name: entity.name as string,
+        note: entity.note as string,
+        group: entity.group as string,
+        blobUrl: entity.blobUrl as string,
+        fields: JSON.parse(entity.fields as string),
+        createdAt: entity.createdAt as string,
+        uploadedBy: entity.uploadedBy as string,
+      });
+    }
+  } catch (error: any) {
+    // If table doesn't exist, just return empty array
+    if (error?.statusCode === 404) {
+      console.log("DocumentTemplates table not found, returning empty array");
+      return [];
+    }
+    throw error;
   }
 
   return templates;
 }
 
 export async function getTemplatesByUser(userId: string): Promise<Template[]> {
+  await ensureTableExists();
   const tableClient = getTableClient();
   const templates: Template[] = [];
 
-  const entities = tableClient.listEntities({
-    queryOptions: { filter: `PartitionKey eq 'templates' and uploadedBy eq '${userId}'` },
-  });
-
-  for await (const entity of entities) {
-    templates.push({
-      id: entity.rowKey as string,
-      name: entity.name as string,
-      note: entity.note as string,
-      group: entity.group as string,
-      blobUrl: entity.blobUrl as string,
-      mergeFields: JSON.parse(entity.mergeFields as string),
-      createdAt: entity.createdAt as string,
-      uploadedBy: entity.uploadedBy as string,
+  try {
+    const entities = tableClient.listEntities({
+      queryOptions: { filter: `PartitionKey eq 'templates' and uploadedBy eq '${userId}'` },
     });
+
+    for await (const entity of entities) {
+      templates.push({
+        id: entity.rowKey as string,
+        name: entity.name as string,
+        note: entity.note as string,
+        group: entity.group as string,
+        blobUrl: entity.blobUrl as string,
+        fields: JSON.parse(entity.fields as string),
+        createdAt: entity.createdAt as string,
+        uploadedBy: entity.uploadedBy as string,
+      });
+    }
+  } catch (error: any) {
+    // If table doesn't exist, just return empty array
+    if (error?.statusCode === 404) {
+      console.log("DocumentTemplates table not found, returning empty array");
+      return [];
+    }
+    throw error;
   }
 
   return templates;
@@ -117,7 +162,7 @@ export async function getTemplatesByUser(userId: string): Promise<Template[]> {
 
 export async function updateTemplate(
   id: string,
-  updates: Partial<Pick<Template, "name" | "note" | "group" | "mergeFields" | "blobUrl">>
+  updates: Partial<Pick<Template, "name" | "note" | "group" | "fields" | "blobUrl">>
 ): Promise<void> {
   const tableClient = getTableClient();
 
@@ -128,9 +173,9 @@ export async function updateTemplate(
       ...updates,
     };
 
-    // Stringify mergeFields if it's being updated
-    if (updates.mergeFields) {
-      updatedEntity.mergeFields = JSON.stringify(updates.mergeFields);
+    // Stringify fields if it's being updated
+    if (updates.fields) {
+      updatedEntity.fields = JSON.stringify(updates.fields);
     }
 
     await tableClient.updateEntity(updatedEntity, "Merge");

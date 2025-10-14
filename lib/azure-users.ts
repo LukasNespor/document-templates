@@ -1,7 +1,7 @@
 import { TableClient, AzureNamedKeyCredential } from "@azure/data-tables";
 import { User } from "@/types";
 
-const tableName = "WordTemplateUsers";
+const tableName = "DocumentTemplateUsers";
 
 let tableClient: TableClient;
 
@@ -23,9 +23,15 @@ export function getUserTableClient(): TableClient {
 
 export async function ensureUserTableExists(): Promise<void> {
   const tableClient = getUserTableClient();
-  await tableClient.createTable().catch(() => {
-    // Table already exists
-  });
+  try {
+    await tableClient.createTable();
+  } catch (error: any) {
+    // Only ignore "table already exists" errors
+    if (error?.statusCode !== 409 && !error?.message?.includes("TableAlreadyExists")) {
+      console.error("Failed to create users table:", error);
+      throw error;
+    }
+  }
 }
 
 export async function saveUser(user: User): Promise<void> {

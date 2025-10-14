@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Extract merge fields
-    let mergeFields: string[];
+    // Extract fields
+    let fields: string[];
     try {
-      mergeFields = extractMergeFields(buffer);
+      fields = extractMergeFields(buffer);
     } catch (error) {
       return NextResponse.json(
         { error: "Nepodařilo se zpracovat Word dokument. Ujistěte se, že se jedná o platný soubor .docx" },
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       note: note || "",
       group: group || "Uncategorized",
       blobUrl,
-      mergeFields,
+      fields,
       createdAt: new Date().toISOString(),
       uploadedBy: currentUser.userId,
     };

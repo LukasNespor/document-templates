@@ -1,6 +1,6 @@
 import { BlobServiceClient } from "@azure/storage-blob";
 
-const containerName = "word-templates";
+const containerName = "document-templates";
 
 let blobServiceClient: BlobServiceClient;
 
@@ -16,7 +16,12 @@ export function getBlobServiceClient(): BlobServiceClient {
 export async function ensureContainerExists(): Promise<void> {
   const blobServiceClient = getBlobServiceClient();
   const containerClient = blobServiceClient.getContainerClient(containerName);
-  await containerClient.createIfNotExists();
+  try {
+    await containerClient.createIfNotExists();
+  } catch (error) {
+    console.error("Failed to create blob container:", error);
+    throw error;
+  }
 }
 
 export async function uploadBlob(

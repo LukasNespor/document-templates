@@ -4,7 +4,7 @@ export interface Template {
   note: string;
   group: string;
   blobUrl: string;
-  mergeFields: string[];
+  fields: string[];
   createdAt: string;
   uploadedBy: string; // User ID who uploaded this template
 }
@@ -14,7 +14,7 @@ export interface TemplateGroup {
   templates: Template[];
 }
 
-export interface MergeFieldValue {
+export interface FieldValue {
   field: string;
   value: string;
 }
