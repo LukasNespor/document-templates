@@ -8,6 +8,7 @@ import { Template } from "@/types";
 interface BulkGenerateDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   template: Template;
 }
 
@@ -20,6 +21,7 @@ interface CsvPreview {
 export default function BulkGenerateDialog({
   isOpen,
   onClose,
+  onSuccess,
   template,
 }: BulkGenerateDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -170,6 +172,11 @@ export default function BulkGenerateDialog({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      // Notify parent of success
+      if (onSuccess) {
+        onSuccess();
+      }
 
       // Close dialog on success
       handleClose();

@@ -6,23 +6,30 @@ export function extractMergeFields(buffer: Buffer): string[] {
   const zip = new PizZip(buffer);
   const fields = new Set<string>();
 
-  // Helper function to extract merge fields from XML content
+  // Helper function to extract {{field}} patterns from XML content
+  // Word may split {{field}} across multiple <w:t> elements, so we need to extract
+  // all text content first, then search for patterns
   const extractFromXml = (xml: string) => {
-    // Match all <w:instrText> elements that contain MERGEFIELD
-    // Pattern: <w:instrText...> MERGEFIELD  FieldName  \* MERGEFORMAT </w:instrText>
-    const instrTextRegex = /<w:instrText[^>]*>(.*?)<\/w:instrText>/g;
+    // Extract all text content from <w:t> elements and join them
+    // This handles cases where {{field}} is split across multiple text runs
+    const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+    const textParts: string[] = [];
     let match;
 
-    while ((match = instrTextRegex.exec(xml)) !== null) {
-      const instrText = match[1];
+    while ((match = textRegex.exec(xml)) !== null) {
+      textParts.push(match[1]);
+    }
 
-      // Check if this is a MERGEFIELD instruction
-      if (instrText.includes("MERGEFIELD")) {
-        // Extract field name from " MERGEFIELD  FieldName  \* MERGEFORMAT "
-        const fieldName = getFieldNameFromMergeField(instrText);
-        if (fieldName && !isSystemField(fieldName)) {
-          fields.add(fieldName);
-        }
+    // Join all text and search for {{...}} patterns
+    const fullText = textParts.join("");
+    const fieldRegex = /\{\{([^}]+)\}\}/g;
+    let fieldMatch;
+
+    while ((fieldMatch = fieldRegex.exec(fullText)) !== null) {
+      const fieldName = fieldMatch[1].trim();
+      // Skip system fields (case-insensitive check for "dnes")
+      if (fieldName.toLowerCase() !== "dnes") {
+        fields.add(fieldName);
       }
     }
   };
@@ -58,105 +65,46 @@ export function extractMergeFields(buffer: Buffer): string[] {
   return Array.from(fields);
 }
 
-// Helper function to check if a field is a system field that should be ignored
-// Filters out Word system fields like PAGE, FORMCHECKBOX, etc.
-function isSystemField(fieldName: string): boolean {
-  const trimmedField = fieldName.trim().replace(/"/g, ""); // Remove quotes
-
-  // System fields to ignore
-  const systemFields = [
-    "PAGE",
-    "PAGE   \\* MERGEFORMAT",
-    "FORMCHECKBOX",
-  ];
-
-  // Check exact matches (case sensitive for most)
-  if (systemFields.includes(trimmedField)) {
-    return true;
-  }
-
-  // Check case-insensitive matches for specific fields
-  if (trimmedField.toLowerCase() === "dnes") {
-    return true;
-  }
-
-  return false;
-}
-
-// Helper function to decode HTML entities
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
-}
-
-// Helper function to extract field name from MERGEFIELD instruction text
-// Input: " MERGEFIELD  FieldName  \\* MERGEFORMAT " or variations
-// Output: "FieldName"
-function getFieldNameFromMergeField(mergeFieldText: string): string | null {
-  // Remove leading/trailing whitespace
-  const trimmed = mergeFieldText.trim();
-
-  // Pattern: MERGEFIELD followed by field name, possibly followed by switches
-  const match = trimmed.match(/MERGEFIELD\s+(\S+)/);
-  if (match && match[1]) {
-    const fieldName = match[1].trim().replace(/"/g, ""); // Remove quotes from field name
-    return decodeHtmlEntities(fieldName); // Decode HTML entities like &amp; to &
-  }
-
-  return null;
-}
-
 export function generateDocument(
   templateBuffer: Buffer,
   mergeFields: MergeFieldValue[]
 ): Buffer {
   const zip = new PizZip(templateBuffer);
 
-  // Create data object from merge fields
+  // Create data object from merge fields (case-insensitive keys)
   const data: Record<string, string> = {};
   mergeFields.forEach((field) => {
-    data[field.field] = field.value;
+    data[field.field.toLowerCase()] = field.value;
   });
 
-  // Automatically populate "dnes" field with current date in Czech format (DD.MM.YYYY)
+  // Automatically populate "dnes" field with current date in Czech format
   data["dnes"] = getCurrentDateCzechFormat();
 
-  // Replace MERGEFIELD codes in all XML parts
+  // Replace {{field}} patterns in all XML parts
+  // Word may split {{field}} across multiple <w:t> elements, so we need special handling
   const replaceMergeFieldsInXml = (xml: string): string => {
-    // Replace each MERGEFIELD with its value
-    Object.keys(data).forEach((fieldName) => {
-      // Skip "dnes" as it will be handled separately with case-insensitive matching
-      if (fieldName.toLowerCase() === "dnes") {
-        return;
+    // Strategy: Find {{field}} patterns even when split across tags
+    // Pattern matches: {{, then anything including tags, then }}
+    const splitFieldRegex = /\{\{([^}]*(?:<[^>]+>[^}]*)*)\}\}/g;
+
+    let result = xml.replace(splitFieldRegex, (match, content) => {
+      // Extract just the text content, removing any XML tags
+      const textContent = content.replace(/<[^>]+>/g, "").trim();
+      const lowerFieldName = textContent.toLowerCase();
+
+      // Look up the value (case-insensitive)
+      const value = data[lowerFieldName];
+
+      if (value !== undefined) {
+        // Replace the entire match (including any internal XML tags) with just the value
+        return escapeXml(value);
       }
 
-      const value = data[fieldName];
-
-      // Pattern to match MERGEFIELD complex field structure
-      // This matches: <w:fldChar w:fldCharType="begin"/>...<w:instrText>MERGEFIELD fieldName</w:instrText>...<w:fldChar w:fldCharType="end"/>
-      const fieldRegex = new RegExp(
-        `<w:fldChar w:fldCharType="begin"[^>]*/>.*?<w:instrText[^>]*>\\s*MERGEFIELD\\s+${fieldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^<]*</w:instrText>.*?<w:fldChar w:fldCharType="end"[^>]*/>`,
-        'gs'
-      );
-
-      xml = xml.replace(fieldRegex, `<w:t>${escapeXml(value)}</w:t>`);
+      // If field not found, keep the original
+      return match;
     });
 
-    // Special handling for "dnes" field (case-insensitive: dnes or DNES)
-    const dnesValue = data["dnes"];
-    if (dnesValue) {
-      const dnesRegex = new RegExp(
-        `<w:fldChar w:fldCharType="begin"[^>]*/>.*?<w:instrText[^>]*>\\s*MERGEFIELD\\s+(?:dnes|DNES)[^<]*</w:instrText>.*?<w:fldChar w:fldCharType="end"[^>]*/>`,
-        'gsi'
-      );
-      xml = xml.replace(dnesRegex, `<w:t>${escapeXml(dnesValue)}</w:t>`);
-    }
-
-    return xml;
+    return result;
   };
 
   // Process document.xml

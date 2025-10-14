@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, FileText, Upload, Sparkles } from "lucide-react";
+import { Loader2, FileText, Upload, Sparkles, TrendingUp, FileCheck, Hash, Calendar, Clock } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
 import HelpDialog from "@/components/HelpDialog";
@@ -9,7 +9,7 @@ import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 import EditTemplateDialog from "@/components/EditTemplateDialog";
 import BulkGenerateDialog from "@/components/BulkGenerateDialog";
 import TemplateForm from "@/components/TemplateForm";
-import { Template, MergeFieldValue } from "@/types";
+import { Template, MergeFieldValue, Statistics } from "@/types";
 
 export default function Home() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -24,6 +24,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(346);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [statistics, setStatistics] = useState<Statistics | null>(null);
 
   // Check if desktop on mount and resize
   useEffect(() => {
@@ -37,18 +38,35 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // Load templates on mount
+  // Load templates and statistics on mount
   useEffect(() => {
     loadTemplates();
+    loadStatistics();
   }, []);
 
   // Load selected template details when selection changes
+  // Reload statistics when returning to home (selectedTemplateId becomes null)
   useEffect(() => {
     if (selectedTemplateId) {
       loadTemplateDetails(selectedTemplateId);
     } else {
       setSelectedTemplate(null);
+      // Reload statistics when viewing home page
+      loadStatistics();
     }
+  }, [selectedTemplateId]);
+
+  // Reload statistics when window/tab regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only reload stats if we're on home page (no template selected)
+      if (!selectedTemplateId) {
+        loadStatistics();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [selectedTemplateId]);
 
   const loadTemplates = async () => {
@@ -61,6 +79,16 @@ export default function Home() {
       console.error("Failed to load templates:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadStatistics = async () => {
+    try {
+      const response = await fetch("/api/statistics");
+      const data = await response.json();
+      setStatistics(data);
+    } catch (error) {
+      console.error("Failed to load statistics:", error);
     }
   };
 
@@ -89,8 +117,9 @@ export default function Home() {
     const data = await response.json();
     const uploadedTemplateId = data.template?.id;
 
-    // Reload templates after upload
+    // Reload templates and statistics after upload
     await loadTemplates();
+    loadStatistics();
 
     // Automatically select the newly uploaded template
     if (uploadedTemplateId) {
@@ -137,6 +166,9 @@ export default function Home() {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+
+    // Reload statistics after generation
+    loadStatistics();
   };
 
   const handleEditTemplate = (template: Template) => {
@@ -190,8 +222,9 @@ export default function Home() {
         setSelectedTemplateId(null);
       }
 
-      // Reload templates after delete
+      // Reload templates and statistics after delete
       await loadTemplates();
+      loadStatistics();
     } catch (error) {
       alert(`Chyba při mazání: ${error instanceof Error ? error.message : "Neznámá chyba"}`);
     }
@@ -220,6 +253,26 @@ export default function Home() {
     }
   };
 
+  // Format saved time for display
+  const formatSavedTime = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) {
+      return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours < 24) {
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-[73px]">
       {/* Top Bar */}
@@ -242,11 +295,11 @@ export default function Home() {
 
         {/* Main Content */}
         <main
-          className="p-6 transition-all duration-200"
-          style={{ marginLeft: isDesktop ? `${sidebarWidth}px` : '0' }}
+          className="p-6 transition-all duration-200 lg:ml-[346px]"
+          style={{ marginLeft: isDesktop && sidebarWidth !== 346 ? `${sidebarWidth}px` : undefined }}
         >
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-96">
+            <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl border border-gray-200 p-8">
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 rounded-2xl mb-4 shadow-lg">
                 <Loader2 className="w-12 h-12 text-white animate-spin" />
               </div>
@@ -282,6 +335,71 @@ export default function Home() {
                   : "Vyberte šablonu z postranního panelu, vyplňte pole a vygenerujte svůj přizpůsobený dokument."}
               </p>
 
+              {/* Statistics Section */}
+              {statistics && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 w-full max-w-4xl">
+                  {/* Current Templates */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-blue-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">{statistics.currentTemplateCount}</div>
+                    <div className="text-xs text-gray-600 mt-1">Aktuální šablony</div>
+                  </div>
+
+                  {/* Total Templates Created */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-green-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">{statistics.totalTemplatesCreated}</div>
+                    <div className="text-xs text-gray-600 mt-1">Vytvořené šablony</div>
+                  </div>
+
+                  {/* Files Generated */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-purple-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <FileCheck className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">{statistics.totalFilesGenerated}</div>
+                    <div className="text-xs text-gray-600 mt-1">Vygenerované dokumenty</div>
+                  </div>
+
+                  {/* Fields Filled */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-orange-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <Hash className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">{statistics.totalFieldsFilled}</div>
+                    <div className="text-xs text-gray-600 mt-1">Vyplněná pole</div>
+                  </div>
+
+                  {/* Saved Time */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-teal-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <Clock className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">
+                      {formatSavedTime(statistics.savedTimeSeconds)}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Ušetřený čas</div>
+                  </div>
+
+                  {/* Last Generation */}
+                  <div className="bg-white rounded-xl p-4 shadow-md border border-pink-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <Calendar className="w-5 h-5 text-pink-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-gray-800">
+                      {statistics.lastGenerationDate
+                        ? new Date(statistics.lastGenerationDate).toLocaleDateString("cs-CZ")
+                        : "Nikdy"}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">Poslední generování</div>
+                  </div>
+                </div>
+              )}
+
               {templates.length === 0 && (
                 <button
                   onClick={() => setIsUploadOpen(true)}
@@ -289,16 +407,6 @@ export default function Home() {
                 >
                   <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Nahrajte svou první šablonu
-                </button>
-              )}
-
-              {templates.length > 0 && (
-                <button
-                  onClick={() => setIsUploadOpen(true)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm group mt-4"
-                >
-                  <Upload className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Přidat šablonu
                 </button>
               )}
             </div>
@@ -323,6 +431,7 @@ export default function Home() {
         <BulkGenerateDialog
           isOpen={isBulkGenerateOpen}
           onClose={() => setIsBulkGenerateOpen(false)}
+          onSuccess={() => loadStatistics()}
           template={selectedTemplate}
         />
       )}

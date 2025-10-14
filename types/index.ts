@@ -28,3 +28,12 @@ export interface BulkGenerateResponse {
   documentsGenerated: number;
   errors?: string[];
 }
+
+export interface Statistics {
+  currentTemplateCount: number;
+  totalTemplatesCreated: number;
+  totalFilesGenerated: number;
+  totalFieldsFilled: number;
+  lastGenerationDate: string | null;
+  savedTimeSeconds: number;
+}

@@ -255,7 +255,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
                 V této šabloně nebyla nalezena žádná pole
               </p>
               <p className="text-gray-400 text-sm mt-1">
-                Přidejte MergeField pole do vašeho Word dokumentu - viz{" "}
+                Přidejte pole ve formátu {"{{"} název pole {"}}"} do vašeho Word dokumentu - viz{" "}
                 <button
                   type="button"
                   onClick={onHelp}

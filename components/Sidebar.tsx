@@ -54,9 +54,15 @@ export default function Sidebar({
     return Object.entries(groups)
       .map(([name, templates]): TemplateGroup => ({
         name,
-        templates,
+        templates: templates.sort((a, b) => a.name.localeCompare(b.name)),
       }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        // "Nezařazeno" always comes first
+        if (a.name === "Nezařazeno") return -1;
+        if (b.name === "Nezařazeno") return 1;
+        // Sort other groups alphabetically
+        return a.name.localeCompare(b.name);
+      });
   }, [templates, searchQuery]);
 
   // Auto-expand all groups when searching

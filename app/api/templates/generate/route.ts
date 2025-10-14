@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTemplate } from "@/lib/azure-table";
 import { downloadBlob } from "@/lib/azure-blob";
 import { generateDocument } from "@/lib/docx-processor";
+import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { MergeFieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -37,6 +38,11 @@ export async function POST(request: NextRequest) {
 
     // Generate document with merge fields
     const generatedBuffer = generateDocument(templateBuffer, mergeFields);
+
+    // Update statistics (don't await to avoid blocking the response)
+    incrementFilesGenerated(1, template.mergeFields.length).catch((error) =>
+      console.error("Failed to update statistics:", error)
+    );
 
     // Use provided fileName or fallback to template name
     const downloadFileName = fileName

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js 15 application for creating Word documents from templates with merge fields. Users can upload Word (.docx) templates containing merge fields in the format `{fieldName}`, organize them by groups, fill in values through a form, and generate customized Word documents.
+This is a Next.js 15 application for creating Word documents from templates with field placeholders. Users can upload Word (.docx) templates containing field placeholders in the format `{{field name}}`, organize them by groups, fill in values through a form, and generate customized Word documents.
 
 ## Development Commands
 
@@ -39,8 +39,8 @@ The application will not function without valid Azure Storage credentials.
 
 ### Data Flow
 
-1. **Template Upload**: User uploads .docx file → API extracts merge fields → File stored in Azure Blob Storage → Metadata stored in Azure Table Storage
-2. **Document Generation**: User selects template → Fills merge field form → API downloads template from Blob Storage → Merges data with docxtemplater → Returns generated .docx
+1. **Template Upload**: User uploads .docx file → API extracts `{{field}}` placeholders → File stored in Azure Blob Storage → Metadata stored in Azure Table Storage
+2. **Document Generation**: User selects template → Fills field values form → API downloads template from Blob Storage → Replaces `{{field}}` placeholders with user values → Returns generated .docx
 
 ### Storage Architecture
 
@@ -53,9 +53,9 @@ The application's core functionality is built around three key modules in the `l
 
 - **azure-blob.ts**: Manages Blob Storage operations (upload/download .docx files)
 - **azure-table.ts**: Manages Table Storage operations (save/retrieve template metadata)
-- **docx-processor.ts**: Handles Word document processing using docxtemplater and pizzip
-  - `extractMergeFields()`: Parses .docx to find all `{fieldName}` merge fields
-  - `generateDocument()`: Merges data into template to create final document
+- **docx-processor.ts**: Handles Word document processing using pizzip
+  - `extractMergeFields()`: Parses .docx XML to find all `{{field name}}` placeholders
+  - `generateDocument()`: Replaces `{{field}}` placeholders with values (case-insensitive matching)
 
 ### API Routes
 
@@ -85,11 +85,15 @@ All shared types are defined in `types/index.ts`:
 
 ## Key Technical Details
 
-### Merge Field Format
+### Field Placeholder Format
 
-- Merge fields in Word documents must use curly brace syntax: `{fieldName}`
-- Field names are extracted by parsing the document XML using docxtemplater
-- All unique fields are stored in the `mergeFields` array in Azure Table Storage
+- Field placeholders in Word documents use double curly brace syntax: `{{field name}}`
+- Users simply type `{{field name}}` directly in their Word documents (no special Word fields required)
+- Field names support spaces and special characters (e.g., `{{Č.J.}}`, `{{Full Name}}`)
+- Field matching is **case-insensitive** (`{{Name}}` = `{{name}}` = `{{NAME}}`)
+- System field `{{dnes}}` is automatically populated with current date in Czech format (e.g., "14. října 2025")
+- Field names are extracted by parsing the document XML for `{{...}}` patterns
+- All unique fields (except `{{dnes}}`) are stored in the `mergeFields` array in Azure Table Storage
 
 ### Azure Storage Naming
 

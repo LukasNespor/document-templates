@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { uploadBlob } from "@/lib/azure-blob";
 import { saveTemplate } from "@/lib/azure-table";
 import { extractMergeFields } from "@/lib/docx-processor";
+import { incrementTemplatesCreated } from "@/lib/azure-statistics";
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest) {
     };
 
     await saveTemplate(template);
+
+    // Update statistics (don't await to avoid blocking the response)
+    incrementTemplatesCreated().catch((error) =>
+      console.error("Failed to update statistics:", error)
+    );
 
     return NextResponse.json(
       { message: "Template uploaded successfully", template },

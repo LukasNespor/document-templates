@@ -68,7 +68,7 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
             </h4>
             <p className="text-gray-600 mb-4">
               Klikněte na tlačítko &quot;Přidat šablonu&quot; a nahrajte Word dokument (.docx)
-              s poli k doplnění. Při nahrávání přiřaďte šabloně název, poznámku a skupinu pro snadnou organizaci.
+              s poli ve formátu {"{{"} název pole {"}}"}. Při nahrávání přiřaďte šabloně název, poznámku a skupinu pro snadnou organizaci.
             </p>
 
             <h4 className="font-semibold text-gray-800 mb-2">
@@ -106,7 +106,7 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
 
                   <h4 className="font-semibold text-gray-800 mb-2">Tipy</h4>
                   <div className="text-gray-600 space-y-2">
-                    <div>Používejte popisné názvy pro pole (např. {"{Jméno}"}, {"{Č.J.}"})</div>
+                    <div>Používejte popisné názvy pro pole (např. {"{{"} Jméno {"}}"}, {"{{"} Č.J. {"}}"})</div>
                     <div>Seskupujte související šablony do skupin pro lepší přehlednost</div>
                     <div>Přidejte poznámky k šablonám pro zapamatování jejich účelu</div>
                     <div>Pro hromadné generování připravte CSV soubor s daty v Excelu</div>
@@ -133,52 +133,55 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
               {openSection === "template" && (
                 <div className="p-6 bg-white">
                   <p className="text-gray-600 mb-4">
-                    Pro vytvoření Word šablony s poli k doplnění postupujte podle těchto kroků:
+                    Vytvoření Word šablony je velmi jednoduché. Stačí napsat dvojité složené závorky kolem názvu pole:
                   </p>
 
-                  <div className="space-y-6 mb-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h5 className="font-semibold text-gray-800 mb-2">1. Přidání pole</h5>
-                <p className="text-gray-600 mb-3">
-                  Na záložce <strong>Vložení</strong> najděte <strong>Rychlé části</strong> a pod tím <strong>Pole</strong>.
-                </p>
-                <img
-                  src="/01-field-add.png"
-                  alt="Vložení pole přes Rychlé části"
-                  className="w-full rounded-lg border border-gray-300 shadow-sm"
-                />
-              </div>
+                  <div className="space-y-4 mb-4">
+                    <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">Formát pole</h5>
+                      <p className="text-gray-600 mb-3">
+                        Jednoduše napište do dokumentu:
+                      </p>
+                      <div className="bg-white rounded p-3 font-mono text-lg text-gray-800 mb-3">
+                        {"{{"} název pole {"}}"}
+                      </div>
+                      <p className="text-gray-600 text-sm">
+                        <strong>Příklady:</strong> {"{{"} Jméno {"}}"}, {"{{"} Č.J. {"}}"}, {"{{"} Adresa {"}}"}, {"{{"} Částka {"}}"}
+                      </p>
+                    </div>
 
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h5 className="font-semibold text-gray-800 mb-2">2. Nastavení MergeField</h5>
-                <p className="text-gray-600 mb-3">
-                  Otevře se dialogové okno, kde je potřeba najít <strong>MergeField</strong> a do pole <strong>Název pole</strong> napsat libovolné pojmenování pole.
-                </p>
-                <img
-                  src="/02-field-dialog.png"
-                  alt="Dialog pro nastavení MergeField"
-                  className="w-full rounded-lg border border-gray-300 shadow-sm"
-                />
-              </div>
+                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">Tip: Systémové pole {"{{"} dnes {"}}"}</h5>
+                      <p className="text-gray-600">
+                        Pole <strong>{"{{"} dnes {"}}"}</strong> se automaticky vyplní aktuálním datem v českém formátu (např. &quot;14. října 2025&quot;).
+                        Nemusíte ho vyplňovat ručně.
+                      </p>
+                    </div>
 
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h5 className="font-semibold text-gray-800 mb-2">3. Přidané pole</h5>
-                <p className="text-gray-600 mb-3">
-                  Nově přidané pole se zobrazí v místě kurzoru myši.
-                </p>
-                <img
-                  src="/03-field-added.png"
-                  alt="Přidané pole v dokumentu"
-                  className="w-full rounded-lg border border-gray-300 shadow-sm"
-                />
-              </div>
+                    <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">Poznámky</h5>
+                      <div className="text-gray-600 space-y-1 text-sm">
+                        <div>✓ Názvy polí nejsou citlivé na velikost písmen ({"{{"} Jméno {"}}"} = {"{{"} jméno {"}}"})</div>
+                        <div>✓ Můžete použít mezery v názvech polí ({"{{"} Full Name {"}}"})</div>
+                        <div>✓ Pole lze použít kdekoliv v dokumentu (záhlaví, zápatí, tabulky)</div>
+                      </div>
+                    </div>
 
-              <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-                <h5 className="font-semibold text-gray-800 mb-2">4. Uložení a nahrání</h5>
-                <p className="text-gray-600">
-                  Dokument uložte jako <strong>Word Document (*.docx)</strong> a nahrajte do systému.
-                </p>
-              </div>
+                    <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">💡 Tip: Psaní složených závorek na české klávesnici</h5>
+                      <div className="text-gray-600 space-y-2 text-sm">
+                        <div>Pro napsání <strong>{"{"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">B</kbd></div>
+                        <div>Pro napsání <strong>{"}"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">N</kbd></div>
+                        <div className="text-xs text-gray-500 mt-2">(AltGr je pravá klávesa Alt)</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h5 className="font-semibold text-gray-800 mb-2">Uložení a nahrání</h5>
+                      <p className="text-gray-600">
+                        Dokument uložte jako <strong>Word Document (*.docx)</strong> a nahrajte do systému pomocí tlačítka &quot;Přidat šablonu&quot;.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

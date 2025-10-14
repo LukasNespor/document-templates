@@ -4,6 +4,7 @@ import { downloadBlob } from "@/lib/azure-blob";
 import { generateDocument } from "@/lib/docx-processor";
 import { parseCsvFile, handleDuplicateFilenames } from "@/lib/csv-processor";
 import { createZipFile, DocumentFile } from "@/lib/zip-generator";
+import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { MergeFieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -109,6 +110,11 @@ export async function POST(request: NextRequest) {
 
     // Create ZIP file with all documents
     const zipBuffer = await createZipFile(documents);
+
+    // Update statistics (don't await to avoid blocking the response)
+    incrementFilesGenerated(documents.length, template.mergeFields.length).catch(
+      (error) => console.error("Failed to update statistics:", error)
+    );
 
     // Prepare response
     const timestamp = new Date().toISOString().split("T")[0];

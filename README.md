@@ -4,8 +4,8 @@ A modern Next.js application for creating Word documents from templates with mer
 
 ## Features
 
-- Upload Word (.docx) templates with merge fields
-- Automatic detection of merge fields in templates
+- Upload Word (.docx) templates with `{{field name}}` placeholders
+- Automatic detection of field placeholders in templates
 - Organize templates by groups with a collapsible sidebar
 - Fill in merge field values through an intuitive form
 - Generate Word documents with merged data
@@ -73,8 +73,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - **Name**: A descriptive name for your template
    - **Group**: Category to organize templates (e.g., "Invoices", "Contracts")
    - **Note**: Optional description or instructions
-   - **File**: Upload a .docx file containing merge fields
-3. Merge fields should be written as `{fieldName}` in your Word document
+   - **File**: Upload a .docx file containing field placeholders
+3. Field placeholders should be written as `{{field name}}` in your Word document
+   - Example: `{{Name}}`, `{{Invoice Number}}`, `{{Date}}`
+   - Field names are case-insensitive (`{{Name}}` = `{{name}}`)
+   - Special field: `{{dnes}}` is automatically filled with current date in Czech format
 4. Click "Upload"
 
 ### Generating Documents
