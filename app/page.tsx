@@ -83,20 +83,30 @@ export default function Home() {
       throw new Error(error.error || "Nahrání selhalo");
     }
 
+    // Get the uploaded template data
+    const data = await response.json();
+    const uploadedTemplateId = data.template?.id;
+
     // Reload templates after upload
     await loadTemplates();
+
+    // Automatically select the newly uploaded template
+    if (uploadedTemplateId) {
+      setSelectedTemplateId(uploadedTemplateId);
+    }
   };
 
   const handleGenerate = async (
     templateId: string,
-    mergeFields: MergeFieldValue[]
+    mergeFields: MergeFieldValue[],
+    fileName: string
   ) => {
     const response = await fetch("/api/templates/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ templateId, mergeFields }),
+      body: JSON.stringify({ templateId, mergeFields, fileName }),
     });
 
     if (!response.ok) {
@@ -104,12 +114,23 @@ export default function Home() {
       throw new Error(error.error || "Generování selhalo");
     }
 
+    // Get filename from Content-Disposition header or use provided fileName
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let downloadFileName = `${fileName}.docx`;
+
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+      if (filenameMatch) {
+        downloadFileName = filenameMatch[1];
+      }
+    }
+
     // Download the generated file
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `generated_${Date.now()}.docx`;
+    a.download = downloadFileName;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
@@ -174,12 +195,36 @@ export default function Home() {
     }
   };
 
+  const handleReuploadTemplate = async (templateId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`/api/templates/${templateId}/reupload`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Znovu nahrání selhalo");
+    }
+
+    // Reload templates after reupload
+    await loadTemplates();
+
+    // Reload selected template to get updated merge fields
+    if (selectedTemplateId === templateId) {
+      await loadTemplateDetails(templateId);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-[73px]">
       {/* Top Bar */}
       <TopBar
         onAddTemplate={() => setIsUploadOpen(true)}
         onHelp={() => setIsHelpOpen(true)}
+        onHome={() => setSelectedTemplateId(null)}
       />
 
       <div>
@@ -211,6 +256,8 @@ export default function Home() {
               onGenerate={handleGenerate}
               onEditTemplate={handleEditTemplate}
               onDeleteTemplate={handleDeleteTemplate}
+              onReuploadTemplate={handleReuploadTemplate}
+              onHelp={() => setIsHelpOpen(true)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl border border-gray-200 p-8">
@@ -222,7 +269,7 @@ export default function Home() {
               </div>
 
               <h2 className="text-3xl font-bold text-gray-800 mb-3 flex items-center gap-3">
-                Vítejte ve Šablonách dokumentů
+                Vítejte v Šablonách dokumentů
                 <Sparkles className="w-7 h-7 text-yellow-500" />
               </h2>
 
@@ -243,9 +290,13 @@ export default function Home() {
               )}
 
               {templates.length > 0 && (
-                <div className="mt-4 text-gray-500 text-sm">
-                  Klikněte na šablonu v postranním panelu a začněte
-                </div>
+                <button
+                  onClick={() => setIsUploadOpen(true)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm group mt-4"
+                >
+                  <Upload className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Přidat šablonu
+                </button>
               )}
             </div>
           )}

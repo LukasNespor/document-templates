@@ -88,16 +88,21 @@ export async function getAllTemplates(): Promise<Template[]> {
 
 export async function updateTemplate(
   id: string,
-  updates: Partial<Pick<Template, "name" | "note" | "group">>
+  updates: Partial<Pick<Template, "name" | "note" | "group" | "mergeFields" | "blobUrl">>
 ): Promise<void> {
   const tableClient = getTableClient();
 
   try {
     const entity = await tableClient.getEntity("templates", id);
-    const updatedEntity = {
+    const updatedEntity: any = {
       ...entity,
       ...updates,
     };
+
+    // Stringify mergeFields if it's being updated
+    if (updates.mergeFields) {
+      updatedEntity.mergeFields = JSON.stringify(updates.mergeFields);
+    }
 
     await tableClient.updateEntity(updatedEntity, "Merge");
   } catch (error) {

@@ -17,7 +17,8 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+        style={{ maxWidth: "874px" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
@@ -34,6 +35,58 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
 
         <div className="overflow-y-auto px-6 py-6 mb-4">
           <div className="prose max-w-none">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Jak vytvořit Word šablonu
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Pro vytvoření Word šablony s poli pro hromadnou korespondenci postupujte podle těchto kroků:
+            </p>
+
+            <div className="space-y-6 mb-8">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-800 mb-2">1. Přidání pole</h5>
+                <p className="text-gray-600 mb-3">
+                  Na záložce <strong>Vložení</strong> najděte <strong>Rychlé části</strong> a pod tím <strong>Pole</strong>.
+                </p>
+                <img
+                  src="/01-field-add.png"
+                  alt="Vložení pole přes Rychlé části"
+                  className="w-full rounded-lg border border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-800 mb-2">2. Nastavení MergeField</h5>
+                <p className="text-gray-600 mb-3">
+                  Otevře se dialogové okno, kde je potřeba najít <strong>MergeField</strong> a do pole <strong>Název pole</strong> napsat libovolné pojmenování pole.
+                </p>
+                <img
+                  src="/02-field-dialog.png"
+                  alt="Dialog pro nastavení MergeField"
+                  className="w-full rounded-lg border border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-800 mb-2">3. Přidané pole</h5>
+                <p className="text-gray-600 mb-3">
+                  Nově přidané pole se zobrazí v místě kurzoru myši.
+                </p>
+                <img
+                  src="/03-field-added.png"
+                  alt="Přidané pole v dokumentu"
+                  className="w-full rounded-lg border border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                <h5 className="font-semibold text-gray-800 mb-2">4. Uložení a nahrání</h5>
+                <p className="text-gray-600">
+                  Dokument uložte jako <strong>Word Document (*.docx)</strong> a nahrajte do systému.
+                </p>
+              </div>
+            </div>
+
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
               Jak začít
             </h3>
@@ -61,7 +114,7 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
             </p>
 
             <h4 className="font-semibold text-gray-800 mb-2">
-              3. Vyplnit pole pro hromadnou korespondenci
+              3. Pole v šabloně
             </h4>
             <p className="text-gray-600 mb-4">
               Vyberte šablonu z postranního panelu. Aplikace zobrazí všechna

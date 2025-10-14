@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp } from "lucide-react";
+import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp, Search, X } from "lucide-react";
 import { Template, TemplateGroup } from "@/types";
 
 interface SidebarProps {
@@ -24,6 +24,7 @@ export default function Sidebar({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sidebarWidth, setSidebarWidth] = useState(346); // 20% wider than 288px
   const [isResizing, setIsResizing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Notify parent of width changes
@@ -33,11 +34,16 @@ export default function Sidebar({
     }
   }, [sidebarWidth, onWidthChange]);
 
-  // Group templates by group name
+  // Group templates by group name (with search filtering)
   const groupedTemplates = useMemo(() => {
+    // Filter templates by search query
+    const filteredTemplates = templates.filter((template) =>
+      template.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const groups: Record<string, Template[]> = {};
 
-    templates.forEach((template) => {
+    filteredTemplates.forEach((template) => {
       const groupName = template.group || "Nezařazeno";
       if (!groups[groupName]) {
         groups[groupName] = [];
@@ -51,7 +57,26 @@ export default function Sidebar({
         templates,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [templates]);
+  }, [templates, searchQuery]);
+
+  // Auto-expand all groups when searching
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const allGroups = new Set(groupedTemplates.map(g => g.name));
+      setExpandedGroups(allGroups);
+    }
+  }, [searchQuery, groupedTemplates]);
+
+  // Auto-expand group containing the selected template
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+      if (selectedTemplate) {
+        const groupName = selectedTemplate.group || "Nezařazeno";
+        setExpandedGroups(prev => new Set(prev).add(groupName));
+      }
+    }
+  }, [selectedTemplateId, templates]);
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -160,13 +185,47 @@ export default function Sidebar({
             )}
           </div>
 
+          {/* Search input */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Hledat šablonu..."
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Vymazat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {groupedTemplates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="bg-gray-200 p-4 rounded-full mb-3">
-                <Inbox className="w-8 h-8 text-gray-400" />
+                {searchQuery ? (
+                  <Search className="w-8 h-8 text-gray-400" />
+                ) : (
+                  <Inbox className="w-8 h-8 text-gray-400" />
+                )}
               </div>
-              <p className="text-gray-500 text-sm font-medium">Zatím žádné šablony</p>
-              <p className="text-gray-400 text-xs mt-1">Nahrajte svou první šablonu</p>
+              {searchQuery ? (
+                <>
+                  <p className="text-gray-500 text-sm font-medium">Žádné výsledky</p>
+                  <p className="text-gray-400 text-xs mt-1">Zkuste jiný hledaný výraz</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 text-sm font-medium">Zatím žádné šablony</p>
+                  <p className="text-gray-400 text-xs mt-1">Nahrajte svou první šablonu</p>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
