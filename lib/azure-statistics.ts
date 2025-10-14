@@ -1,13 +1,15 @@
 import { TableClient, AzureNamedKeyCredential } from "@azure/data-tables";
 
-const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || "";
-const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY || "";
-const tableName = "WordTemplates";
+const tableName = "WordTemplateStatistics";
 
 let tableClient: TableClient;
 
 function getTableClient(): TableClient {
   if (!tableClient) {
+    // Read environment variables when the function is called, not at module load time
+    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || "";
+    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY || "";
+
     const credential = new AzureNamedKeyCredential(accountName, accountKey);
     tableClient = new TableClient(
       `https://${accountName}.table.core.windows.net`,
@@ -25,18 +27,18 @@ async function ensureTableExists(): Promise<void> {
   });
 }
 
-async function ensureStatisticsEntity(): Promise<void> {
+async function ensureStatisticsEntity(userId: string): Promise<void> {
   await ensureTableExists();
   const tableClient = getTableClient();
 
   try {
     // Try to get existing entity
-    await tableClient.getEntity("statistics", "global");
+    await tableClient.getEntity("statistics", userId);
   } catch (error) {
     // Entity doesn't exist, create it
     const entity = {
       partitionKey: "statistics",
-      rowKey: "global",
+      rowKey: userId,
       totalTemplatesCreated: 0,
       totalFilesGenerated: 0,
       totalFieldsFilled: 0,
@@ -46,17 +48,17 @@ async function ensureStatisticsEntity(): Promise<void> {
   }
 }
 
-export async function getStatistics(): Promise<{
+export async function getStatistics(userId: string): Promise<{
   totalTemplatesCreated: number;
   totalFilesGenerated: number;
   totalFieldsFilled: number;
   lastGenerationDate: string | null;
 }> {
-  await ensureStatisticsEntity();
+  await ensureStatisticsEntity(userId);
   const tableClient = getTableClient();
 
   try {
-    const entity = await tableClient.getEntity("statistics", "global");
+    const entity = await tableClient.getEntity("statistics", userId);
     return {
       totalTemplatesCreated: (entity.totalTemplatesCreated as number) || 0,
       totalFilesGenerated: (entity.totalFilesGenerated as number) || 0,
@@ -75,14 +77,15 @@ export async function getStatistics(): Promise<{
 }
 
 export async function incrementFilesGenerated(
+  userId: string,
   filesCount: number,
   fieldsCount: number
 ): Promise<void> {
-  await ensureStatisticsEntity();
+  await ensureStatisticsEntity(userId);
   const tableClient = getTableClient();
 
   try {
-    const entity = await tableClient.getEntity("statistics", "global");
+    const entity = await tableClient.getEntity("statistics", userId);
     const updatedEntity = {
       ...entity,
       totalFilesGenerated:
@@ -98,12 +101,12 @@ export async function incrementFilesGenerated(
   }
 }
 
-export async function incrementTemplatesCreated(): Promise<void> {
-  await ensureStatisticsEntity();
+export async function incrementTemplatesCreated(userId: string): Promise<void> {
+  await ensureStatisticsEntity(userId);
   const tableClient = getTableClient();
 
   try {
-    const entity = await tableClient.getEntity("statistics", "global");
+    const entity = await tableClient.getEntity("statistics", userId);
     const updatedEntity = {
       ...entity,
       totalTemplatesCreated:

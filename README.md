@@ -4,6 +4,7 @@ A modern Next.js application for creating Word documents from templates with mer
 
 ## Features
 
+- **User Authentication**: Secure login with username and password
 - Upload Word (.docx) templates with `{{field name}}` placeholders
 - Automatic detection of field placeholders in templates
 - Organize templates by groups with a collapsible sidebar
@@ -50,19 +51,62 @@ Edit `.env` and add your Azure credentials:
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=YOUR_ACCOUNT_NAME;AccountKey=YOUR_ACCOUNT_KEY;EndpointSuffix=core.windows.net
 AZURE_STORAGE_ACCOUNT_NAME=YOUR_ACCOUNT_NAME
 AZURE_STORAGE_ACCOUNT_KEY=YOUR_ACCOUNT_KEY
+SESSION_SECRET=your_generated_secret_here
 ```
 
 Replace:
 - `YOUR_ACCOUNT_NAME` with your Azure Storage account name
 - `YOUR_ACCOUNT_KEY` with your Azure Storage account key
+- `SESSION_SECRET` with a secure random string (at least 32 characters)
 
-### 4. Run the Development Server
+To generate a secure session secret:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 4. Create Your First User
+
+Since there's no admin UI yet, use the provided script to create a user:
+
+```bash
+npx tsx scripts/create-user.ts <username> <password>
+```
+
+Example:
+```bash
+npx tsx scripts/create-user.ts admin MySecurePassword123
+```
+
+**Important**: Passwords are hashed using bcrypt and cannot be recovered. The hash is one-way encryption, so make sure to remember your password.
+
+### 5. Run the Development Server
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+The application will redirect you to the login page. Use the credentials you created in step 4.
+
+## Authentication & Security
+
+### How Authentication Works
+
+- **Secure Password Storage**: Passwords are hashed using bcrypt with 10 salt rounds. The hash is a one-way encryption that cannot be reversed to retrieve the original password.
+- **Session Management**: User sessions are secured using iron-session with encrypted cookies.
+- **Protected Routes**: All application routes require authentication. Unauthenticated users are redirected to the login page.
+- **User Storage**: User accounts are stored in Azure Table Storage in a dedicated `WordTemplateUsers` table.
+
+### Managing Users
+
+To create additional users, use the create-user script:
+
+```bash
+npx tsx scripts/create-user.ts <username> <password>
+```
+
+Note: There is no admin UI for user management yet. You'll need to use this script or directly access Azure Table Storage to manage users.
 
 ## Usage
 
@@ -93,26 +137,37 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 word-templates/
 ├── app/
 │   ├── api/
-│   │   └── templates/          # API routes
+│   │   ├── auth/               # Authentication API routes
+│   │   │   ├── login/          # Login endpoint
+│   │   │   ├── logout/         # Logout endpoint
+│   │   │   └── session/        # Session check endpoint
+│   │   └── templates/          # Template API routes
 │   │       ├── route.ts        # List templates
 │   │       ├── upload/         # Upload templates
 │   │       ├── [id]/           # Get template by ID
 │   │       └── generate/       # Generate documents
+│   ├── login/
+│   │   └── page.tsx            # Login page
 │   ├── globals.css             # Global styles
 │   ├── layout.tsx              # Root layout
-│   └── page.tsx                # Main page
+│   └── page.tsx                # Main page (protected)
 ├── components/
-│   ├── TopBar.tsx              # Top navigation bar
+│   ├── TopBar.tsx              # Top navigation bar with logout
 │   ├── Sidebar.tsx             # Template sidebar
 │   ├── HelpDialog.tsx          # Help modal
 │   ├── UploadTemplateDialog.tsx # Upload modal
 │   └── TemplateForm.tsx        # Merge field form
 ├── lib/
+│   ├── auth.ts                 # Authentication utilities (bcrypt, sessions)
 │   ├── azure-blob.ts           # Blob Storage utilities
 │   ├── azure-table.ts          # Table Storage utilities
+│   ├── azure-users.ts          # User management in Table Storage
 │   └── docx-processor.ts       # Word document processing
-└── types/
-    └── index.ts                # TypeScript types
+├── scripts/
+│   └── create-user.ts          # User creation script
+├── types/
+│   └── index.ts                # TypeScript types
+└── middleware.ts               # Authentication middleware
 ```
 
 ## Technologies Used
@@ -121,7 +176,9 @@ word-templates/
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first styling
 - **Azure Blob Storage** - File storage
-- **Azure Table Storage** - Metadata storage
+- **Azure Table Storage** - Metadata and user storage
+- **bcrypt** - Secure password hashing
+- **iron-session** - Encrypted session management
 - **docxtemplater** - Word document templating
 - **pizzip** - ZIP file handling for .docx files
 

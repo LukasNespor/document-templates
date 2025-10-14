@@ -3,10 +3,20 @@ import { getTemplate } from "@/lib/azure-table";
 import { downloadBlob } from "@/lib/azure-blob";
 import { generateDocument } from "@/lib/docx-processor";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
+import { getCurrentUser } from "@/lib/auth";
 import { MergeFieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { templateId, mergeFields, fileName } = body as {
       templateId: string;
@@ -16,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!templateId || !mergeFields) {
       return NextResponse.json(
-        { error: "Template ID and merge fields are required" },
+        { error: "ID šablony a slučovací pole jsou povinné" },
         { status: 400 }
       );
     }
@@ -25,7 +35,7 @@ export async function POST(request: NextRequest) {
     const template = await getTemplate(templateId);
     if (!template) {
       return NextResponse.json(
-        { error: "Template not found" },
+        { error: "Šablona nenalezena" },
         { status: 404 }
       );
     }
@@ -40,7 +50,7 @@ export async function POST(request: NextRequest) {
     const generatedBuffer = generateDocument(templateBuffer, mergeFields);
 
     // Update statistics (don't await to avoid blocking the response)
-    incrementFilesGenerated(1, template.mergeFields.length).catch((error) =>
+    incrementFilesGenerated(currentUser.userId, 1, template.mergeFields.length).catch((error) =>
       console.error("Failed to update statistics:", error)
     );
 
@@ -60,7 +70,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Generate document error:", error);
     return NextResponse.json(
-      { error: "Failed to generate document" },
+      { error: "Generování dokumentu selhalo" },
       { status: 500 }
     );
   }

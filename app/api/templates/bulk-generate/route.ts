@@ -5,10 +5,20 @@ import { generateDocument } from "@/lib/docx-processor";
 import { parseCsvFile, handleDuplicateFilenames } from "@/lib/csv-processor";
 import { createZipFile, DocumentFile } from "@/lib/zip-generator";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
+import { getCurrentUser } from "@/lib/auth";
 import { MergeFieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
     const formData = await request.formData();
     const templateId = formData.get("templateId") as string;
     const csvFile = formData.get("csvFile") as File;
@@ -16,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Validate inputs
     if (!templateId || !csvFile) {
       return NextResponse.json(
-        { error: "Template ID and CSV file are required" },
+        { error: "ID šablony a CSV soubor jsou povinné" },
         { status: 400 }
       );
     }
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!csvFile.name.endsWith(".csv")) {
       return NextResponse.json(
-        { error: "File must be a CSV file" },
+        { error: "Soubor musí být CSV soubor" },
         { status: 400 }
       );
     }
@@ -33,7 +43,7 @@ export async function POST(request: NextRequest) {
     const template = await getTemplate(templateId);
     if (!template) {
       return NextResponse.json(
-        { error: "Template not found" },
+        { error: "Šablona nenalezena" },
         { status: 404 }
       );
     }
@@ -47,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (!validationResult.isValid || !validationResult.data) {
       return NextResponse.json(
         {
-          error: "CSV validation failed",
+          error: "Validace CSV selhala",
           details: validationResult.errors,
           warnings: validationResult.warnings,
         },
@@ -89,9 +99,9 @@ export async function POST(request: NextRequest) {
         });
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
+          error instanceof Error ? error.message : "Neznámá chyba";
         generationErrors.push(
-          `Failed to generate document for "${row.filename}": ${errorMessage}`
+          `Nepodařilo se vygenerovat dokument pro "${row.filename}": ${errorMessage}`
         );
         console.error(`Error generating document for row ${i + 1}:`, error);
       }
@@ -101,7 +111,7 @@ export async function POST(request: NextRequest) {
     if (documents.length === 0) {
       return NextResponse.json(
         {
-          error: "Failed to generate any documents",
+          error: "Nepodařilo se vygenerovat žádný dokument",
           details: generationErrors,
         },
         { status: 500 }
@@ -112,7 +122,7 @@ export async function POST(request: NextRequest) {
     const zipBuffer = await createZipFile(documents);
 
     // Update statistics (don't await to avoid blocking the response)
-    incrementFilesGenerated(documents.length, template.mergeFields.length).catch(
+    incrementFilesGenerated(currentUser.userId, documents.length, template.mergeFields.length).catch(
       (error) => console.error("Failed to update statistics:", error)
     );
 
@@ -142,8 +152,8 @@ export async function POST(request: NextRequest) {
     console.error("Bulk generate error:", error);
     return NextResponse.json(
       {
-        error: "Failed to generate documents",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "Generování dokumentů selhalo",
+        details: error instanceof Error ? error.message : "Neznámá chyba",
       },
       { status: 500 }
     );

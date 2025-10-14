@@ -1,14 +1,16 @@
 import { TableClient, AzureNamedKeyCredential } from "@azure/data-tables";
 import { Template } from "@/types";
 
-const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || "";
-const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY || "";
 const tableName = "WordTemplates";
 
 let tableClient: TableClient;
 
 export function getTableClient(): TableClient {
   if (!tableClient) {
+    // Read environment variables when the function is called, not at module load time
+    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || "";
+    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY || "";
+
     const credential = new AzureNamedKeyCredential(accountName, accountKey);
     tableClient = new TableClient(
       `https://${accountName}.table.core.windows.net`,
@@ -39,6 +41,7 @@ export async function saveTemplate(template: Template): Promise<void> {
     blobUrl: template.blobUrl,
     mergeFields: JSON.stringify(template.mergeFields),
     createdAt: template.createdAt,
+    uploadedBy: template.uploadedBy,
   };
 
   await tableClient.upsertEntity(entity);
@@ -57,6 +60,7 @@ export async function getTemplate(id: string): Promise<Template | null> {
       blobUrl: entity.blobUrl as string,
       mergeFields: JSON.parse(entity.mergeFields as string),
       createdAt: entity.createdAt as string,
+      uploadedBy: entity.uploadedBy as string,
     };
   } catch (error) {
     return null;
@@ -80,6 +84,31 @@ export async function getAllTemplates(): Promise<Template[]> {
       blobUrl: entity.blobUrl as string,
       mergeFields: JSON.parse(entity.mergeFields as string),
       createdAt: entity.createdAt as string,
+      uploadedBy: entity.uploadedBy as string,
+    });
+  }
+
+  return templates;
+}
+
+export async function getTemplatesByUser(userId: string): Promise<Template[]> {
+  const tableClient = getTableClient();
+  const templates: Template[] = [];
+
+  const entities = tableClient.listEntities({
+    queryOptions: { filter: `PartitionKey eq 'templates' and uploadedBy eq '${userId}'` },
+  });
+
+  for await (const entity of entities) {
+    templates.push({
+      id: entity.rowKey as string,
+      name: entity.name as string,
+      note: entity.note as string,
+      group: entity.group as string,
+      blobUrl: entity.blobUrl as string,
+      mergeFields: JSON.parse(entity.mergeFields as string),
+      createdAt: entity.createdAt as string,
+      uploadedBy: entity.uploadedBy as string,
     });
   }
 

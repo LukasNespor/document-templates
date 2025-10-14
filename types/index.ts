@@ -6,6 +6,7 @@ export interface Template {
   blobUrl: string;
   mergeFields: string[];
   createdAt: string;
+  uploadedBy: string; // User ID who uploaded this template
 }
 
 export interface TemplateGroup {
@@ -36,4 +37,17 @@ export interface Statistics {
   totalFieldsFilled: number;
   lastGenerationDate: string | null;
   savedTimeSeconds: number;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  passwordHash: string;
+  createdAt: string;
+}
+
+export interface SessionData {
+  userId: string;
+  username: string;
+  isLoggedIn: boolean;
 }

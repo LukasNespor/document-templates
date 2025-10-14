@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, FileText, Upload, Sparkles, TrendingUp, FileCheck, Hash, Calendar, Clock } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
@@ -12,6 +13,7 @@ import TemplateForm from "@/components/TemplateForm";
 import { Template, MergeFieldValue, Statistics } from "@/types";
 
 export default function Home() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -25,6 +27,7 @@ export default function Home() {
   const [sidebarWidth, setSidebarWidth] = useState(346);
   const [isDesktop, setIsDesktop] = useState(false);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   // Check if desktop on mount and resize
   useEffect(() => {
@@ -38,11 +41,37 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
+  // Check session on mount
+  useEffect(() => {
+    checkSession();
+  }, []);
+
   // Load templates and statistics on mount
   useEffect(() => {
     loadTemplates();
     loadStatistics();
   }, []);
+
+  const checkSession = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      const data = await response.json();
+      if (data.isLoggedIn && data.user) {
+        setUsername(data.user.username);
+      }
+    } catch (error) {
+      console.error("Failed to check session:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   // Load selected template details when selection changes
   // Reload statistics when returning to home (selectedTemplateId becomes null)
@@ -280,6 +309,8 @@ export default function Home() {
         onAddTemplate={() => setIsUploadOpen(true)}
         onHelp={() => setIsHelpOpen(true)}
         onHome={() => setSelectedTemplateId(null)}
+        username={username || undefined}
+        onLogout={handleLogout}
       />
 
       <div>

@@ -1,12 +1,13 @@
 import { BlobServiceClient } from "@azure/storage-blob";
 
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || "";
 const containerName = "word-templates";
 
 let blobServiceClient: BlobServiceClient;
 
 export function getBlobServiceClient(): BlobServiceClient {
   if (!blobServiceClient) {
+    // Read environment variables when the function is called, not at module load time
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || "";
     blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
   }
   return blobServiceClient;

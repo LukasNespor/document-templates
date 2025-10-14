@@ -1,16 +1,26 @@
 import { NextResponse } from "next/server";
-import { getAllTemplates } from "@/lib/azure-table";
+import { getTemplatesByUser } from "@/lib/azure-table";
 import { getStatistics } from "@/lib/azure-statistics";
+import { getCurrentUser } from "@/lib/auth";
 import { Statistics } from "@/types";
 
 export async function GET() {
   try {
-    // Get current template count
-    const templates = await getAllTemplates();
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
+    // Get current template count for this user
+    const templates = await getTemplatesByUser(currentUser.userId);
     const currentTemplateCount = templates.length;
 
-    // Get cumulative statistics
-    const stats = await getStatistics();
+    // Get user-specific statistics
+    const stats = await getStatistics(currentUser.userId);
 
     // Calculate saved time
     // Overhead per file: 30 seconds (copy, rename, open, save)
@@ -31,7 +41,7 @@ export async function GET() {
   } catch (error) {
     console.error("Get statistics error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch statistics" },
+      { error: "Načtení statistik selhalo" },
       { status: 500 }
     );
   }

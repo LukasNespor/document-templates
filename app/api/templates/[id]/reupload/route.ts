@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTemplate, updateTemplate } from "@/lib/azure-table";
 import { uploadBlob } from "@/lib/azure-blob";
 import { extractMergeFields } from "@/lib/docx-processor";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function PUT(
   request: NextRequest,
@@ -10,13 +11,30 @@ export async function PUT(
   try {
     const { id } = await params;
 
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
     // Check if template exists
     const existingTemplate = await getTemplate(id);
 
     if (!existingTemplate) {
       return NextResponse.json(
-        { error: "Template not found" },
+        { error: "Šablona nenalezena" },
         { status: 404 }
+      );
+    }
+
+    // Check if user owns this template
+    if (existingTemplate.uploadedBy !== currentUser.userId) {
+      return NextResponse.json(
+        { error: "Nemáte oprávnění znovu nahrát tuto šablonu" },
+        { status: 403 }
       );
     }
 
@@ -25,7 +43,7 @@ export async function PUT(
 
     if (!file) {
       return NextResponse.json(
-        { error: "File is required" },
+        { error: "Soubor je povinný" },
         { status: 400 }
       );
     }
@@ -40,7 +58,7 @@ export async function PUT(
       mergeFields = extractMergeFields(buffer);
     } catch (error) {
       return NextResponse.json(
-        { error: "Failed to parse Word document. Please ensure it is a valid .docx file" },
+        { error: "Nepodařilo se zpracovat Word dokument. Ujistěte se, že se jedná o platný soubor .docx" },
         { status: 400 }
       );
     }
@@ -56,13 +74,13 @@ export async function PUT(
     });
 
     return NextResponse.json(
-      { message: "Template reuploaded successfully", mergeFields },
+      { message: "Šablona úspěšně nahrána znovu", mergeFields },
       { status: 200 }
     );
   } catch (error) {
     console.error("Reupload error:", error);
     return NextResponse.json(
-      { error: "Failed to reupload template" },
+      { error: "Opětovné nahrání šablony selhalo" },
       { status: 500 }
     );
   }

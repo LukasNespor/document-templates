@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTemplate, updateTemplate, deleteTemplate } from "@/lib/azure-table";
 import { deleteBlob } from "@/lib/azure-blob";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
 
     if (!template) {
       return NextResponse.json(
-        { error: "Template not found" },
+        { error: "Šablona nenalezena" },
         { status: 404 }
       );
     }
@@ -22,7 +23,7 @@ export async function GET(
   } catch (error) {
     console.error("Get template error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch template" },
+      { error: "Načtení šablony selhalo" },
       { status: 500 }
     );
   }
@@ -34,13 +35,40 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
+    // Get template to check ownership
+    const template = await getTemplate(id);
+    if (!template) {
+      return NextResponse.json(
+        { error: "Šablona nenalezena" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user owns this template
+    if (template.uploadedBy !== currentUser.userId) {
+      return NextResponse.json(
+        { error: "Nemáte oprávnění upravit tuto šablonu" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const { name, note, group } = body;
 
     if (!name && !note && !group) {
       return NextResponse.json(
-        { error: "At least one field (name, note, or group) is required" },
+        { error: "Alespoň jedno pole (název, poznámka nebo skupina) je povinné" },
         { status: 400 }
       );
     }
@@ -48,21 +76,21 @@ export async function PATCH(
     // Validate field lengths
     if (name !== undefined && name.length > 100) {
       return NextResponse.json(
-        { error: "Name must be 100 characters or less" },
+        { error: "Název musí mít nejvýše 100 znaků" },
         { status: 400 }
       );
     }
 
     if (group !== undefined && group.length > 50) {
       return NextResponse.json(
-        { error: "Group must be 50 characters or less" },
+        { error: "Skupina musí mít nejvýše 50 znaků" },
         { status: 400 }
       );
     }
 
     if (note !== undefined && note.length > 500) {
       return NextResponse.json(
-        { error: "Note must be 500 characters or less" },
+        { error: "Poznámka musí mít nejvýše 500 znaků" },
         { status: 400 }
       );
     }
@@ -75,13 +103,13 @@ export async function PATCH(
     await updateTemplate(id, updates);
 
     return NextResponse.json(
-      { message: "Template updated successfully" },
+      { message: "Šablona úspěšně aktualizována" },
       { status: 200 }
     );
   } catch (error) {
     console.error("Update template error:", error);
     return NextResponse.json(
-      { error: "Failed to update template" },
+      { error: "Aktualizace šablony selhala" },
       { status: 500 }
     );
   }
@@ -94,13 +122,30 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Get template to find blob filename
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
+    // Get template to find blob filename and check ownership
     const template = await getTemplate(id);
 
     if (!template) {
       return NextResponse.json(
-        { error: "Template not found" },
+        { error: "Šablona nenalezena" },
         { status: 404 }
+      );
+    }
+
+    // Check if user owns this template
+    if (template.uploadedBy !== currentUser.userId) {
+      return NextResponse.json(
+        { error: "Nemáte oprávnění smazat tuto šablonu" },
+        { status: 403 }
       );
     }
 
@@ -114,13 +159,13 @@ export async function DELETE(
     ]);
 
     return NextResponse.json(
-      { message: "Template deleted successfully" },
+      { message: "Šablona úspěšně smazána" },
       { status: 200 }
     );
   } catch (error) {
     console.error("Delete template error:", error);
     return NextResponse.json(
-      { error: "Failed to delete template" },
+      { error: "Smazání šablony selhalo" },
       { status: 500 }
     );
   }
