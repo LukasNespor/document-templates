@@ -18,8 +18,6 @@ function getTableClient(): TableClient {
       throw new Error("Azure Storage credentials not configured");
     }
 
-    console.log("Initializing Table Client for DocumentTemplateStatistics with account:", accountName);
-
     const credential = new AzureNamedKeyCredential(accountName, accountKey);
     tableClient = new TableClient(
       `https://${accountName}.table.core.windows.net`,
@@ -33,13 +31,11 @@ function getTableClient(): TableClient {
 async function ensureTableExists(): Promise<void> {
   const tableClient = getTableClient();
   try {
-    console.log("Attempting to create DocumentTemplateStatistics table...");
-    const result = await tableClient.createTable();
-    console.log("DocumentTemplateStatistics table created successfully:", result);
+    await tableClient.createTable();
   } catch (error: any) {
     // Only ignore "table already exists" errors
     if (error?.statusCode === 409 || error?.message?.includes("TableAlreadyExists")) {
-      console.log("DocumentTemplateStatistics table already exists");
+      // Table already exists, continue
     } else {
       console.error("Failed to create statistics table:", {
         statusCode: error?.statusCode,
@@ -53,18 +49,15 @@ async function ensureTableExists(): Promise<void> {
 }
 
 async function ensureStatisticsEntity(userId: string): Promise<void> {
-  console.log("Ensuring statistics entity for user:", userId);
   await ensureTableExists();
   const tableClient = getTableClient();
 
   try {
     // Try to get existing entity
-    const existing = await tableClient.getEntity("statistics", userId);
-    console.log("Statistics entity already exists for user:", userId);
+    await tableClient.getEntity("statistics", userId);
   } catch (error: any) {
     // Only create if entity doesn't exist
     if (error?.statusCode === 404 || error?.message?.includes("ResourceNotFound")) {
-      console.log("Creating new statistics entity for user:", userId);
       const entity = {
         partitionKey: "statistics",
         rowKey: userId,
@@ -75,7 +68,6 @@ async function ensureStatisticsEntity(userId: string): Promise<void> {
       };
       try {
         await tableClient.createEntity(entity);
-        console.log("Statistics entity created successfully for user:", userId);
       } catch (createError: any) {
         console.error("Failed to create statistics entity:", {
           statusCode: createError?.statusCode,

@@ -19,8 +19,6 @@ export function getTableClient(): TableClient {
       throw new Error("Azure Storage credentials not configured");
     }
 
-    console.log("Initializing Table Client for DocumentTemplates with account:", accountName);
-
     const credential = new AzureNamedKeyCredential(accountName, accountKey);
     tableClient = new TableClient(
       `https://${accountName}.table.core.windows.net`,
@@ -34,13 +32,11 @@ export function getTableClient(): TableClient {
 export async function ensureTableExists(): Promise<void> {
   const tableClient = getTableClient();
   try {
-    console.log("Attempting to create DocumentTemplates table...");
-    const result = await tableClient.createTable();
-    console.log("DocumentTemplates table created successfully:", result);
+    await tableClient.createTable();
   } catch (error: any) {
     // Only ignore "table already exists" errors
     if (error?.statusCode === 409 || error?.message?.includes("TableAlreadyExists")) {
-      console.log("DocumentTemplates table already exists");
+      // Table already exists, continue
     } else {
       console.error("Failed to create templates table:", {
         statusCode: error?.statusCode,
@@ -117,7 +113,6 @@ export async function getAllTemplates(): Promise<Template[]> {
   } catch (error: any) {
     // If table doesn't exist, just return empty array
     if (error?.statusCode === 404) {
-      console.log("DocumentTemplates table not found, returning empty array");
       return [];
     }
     throw error;
@@ -151,7 +146,6 @@ export async function getTemplatesByUser(userId: string): Promise<Template[]> {
   } catch (error: any) {
     // If table doesn't exist, just return empty array
     if (error?.statusCode === 404) {
-      console.log("DocumentTemplates table not found, returning empty array");
       return [];
     }
     throw error;
