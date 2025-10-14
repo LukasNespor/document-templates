@@ -1,0 +1,240 @@
+"use client";
+
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp } from "lucide-react";
+import { Template, TemplateGroup } from "@/types";
+
+interface SidebarProps {
+  templates: Template[];
+  selectedTemplateId: string | null;
+  onSelectTemplate: (templateId: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  onWidthChange?: (width: number) => void;
+}
+
+export default function Sidebar({
+  templates,
+  selectedTemplateId,
+  onSelectTemplate,
+  isOpen,
+  onToggle,
+  onWidthChange,
+}: SidebarProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [sidebarWidth, setSidebarWidth] = useState(346); // 20% wider than 288px
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Notify parent of width changes
+  useEffect(() => {
+    if (onWidthChange) {
+      onWidthChange(sidebarWidth);
+    }
+  }, [sidebarWidth, onWidthChange]);
+
+  // Group templates by group name
+  const groupedTemplates = useMemo(() => {
+    const groups: Record<string, Template[]> = {};
+
+    templates.forEach((template) => {
+      const groupName = template.group || "Nezařazeno";
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(template);
+    });
+
+    return Object.entries(groups)
+      .map(([name, templates]): TemplateGroup => ({
+        name,
+        templates,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [templates]);
+
+  const toggleGroup = (groupName: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName);
+    } else {
+      newExpanded.add(groupName);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const areAllExpanded = useMemo(() => {
+    if (groupedTemplates.length === 0) return false;
+    return groupedTemplates.every(g => expandedGroups.has(g.name));
+  }, [groupedTemplates, expandedGroups]);
+
+  const toggleAll = () => {
+    if (areAllExpanded) {
+      setExpandedGroups(new Set());
+    } else {
+      const allGroups = new Set(groupedTemplates.map(g => g.name));
+      setExpandedGroups(allGroups);
+    }
+  };
+
+  // Handle resize
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const newWidth = e.clientX;
+      if (newWidth >= 250 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
+
+  return (
+    <>
+      {/* Hamburger button */}
+      <button
+        onClick={onToggle}
+        className="fixed top-20 left-4 z-50 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all lg:hidden"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onToggle}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        ref={sidebarRef}
+        className={`sidebar-mobile sidebar-desktop fixed left-0 top-[73px] bottom-0 z-40 bg-gradient-to-b from-gray-50 to-gray-100 border-r border-gray-200 shadow-lg flex flex-col ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+        style={{
+          width: `${sidebarWidth}px`,
+          minWidth: "250px",
+          maxWidth: "600px",
+          height: "calc(100vh - 73px)"
+        }}
+      >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-5">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Folder className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-bold text-gray-800">Moje šablony</h2>
+            </div>
+            {groupedTemplates.length > 0 && (
+              <button
+                onClick={toggleAll}
+                className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                title={areAllExpanded ? "Sbalit vše" : "Rozbalit vše"}
+              >
+                {areAllExpanded ? (
+                  <ChevronsUp className="w-4 h-4 text-gray-600" />
+                ) : (
+                  <ChevronsDown className="w-4 h-4 text-gray-600" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {groupedTemplates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="bg-gray-200 p-4 rounded-full mb-3">
+                <Inbox className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-sm font-medium">Zatím žádné šablony</p>
+              <p className="text-gray-400 text-xs mt-1">Nahrajte svou první šablonu</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {groupedTemplates.map((group) => (
+                <div key={group.name} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  {/* Group header */}
+                  <button
+                    onClick={() => toggleGroup(group.name)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      {expandedGroups.has(group.name) ? (
+                        <FolderOpen className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Folder className="w-5 h-5 text-gray-600" />
+                      )}
+                      <span className="font-semibold text-gray-800 text-sm">
+                        {group.name}
+                      </span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {group.templates.length}
+                      </span>
+                    </div>
+                    <ChevronRight
+                      className={`w-4 h-4 text-gray-400 transition-transform ${
+                        expandedGroups.has(group.name) ? "rotate-90" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Group items */}
+                  {expandedGroups.has(group.name) && (
+                    <div className="bg-gray-50 border-t border-gray-200">
+                      {group.templates.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => onSelectTemplate(template.id)}
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-all ${
+                            selectedTemplateId === template.id
+                              ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600"
+                              : "hover:bg-white text-gray-700 border-l-4 border-transparent"
+                          }`}
+                        >
+                          <FileText className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm truncate">{template.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Resize handle */}
+        <div
+          className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors group"
+          onMouseDown={handleMouseDown}
+          style={{
+            backgroundColor: isResizing ? "#3b82f6" : "transparent"
+          }}
+        >
+          <div className="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
