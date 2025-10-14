@@ -17,3 +17,14 @@ export interface MergeFieldValue {
   field: string;
   value: string;
 }
+
+export interface BulkGenerateRequest {
+  templateId: string;
+  csvFile: File;
+}
+
+export interface BulkGenerateResponse {
+  success: boolean;
+  documentsGenerated: number;
+  errors?: string[];
+}

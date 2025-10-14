@@ -1,0 +1,145 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getTemplate } from "@/lib/azure-table";
+import { downloadBlob } from "@/lib/azure-blob";
+import { generateDocument } from "@/lib/docx-processor";
+import { parseCsvFile, handleDuplicateFilenames } from "@/lib/csv-processor";
+import { createZipFile, DocumentFile } from "@/lib/zip-generator";
+import { MergeFieldValue } from "@/types";
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const templateId = formData.get("templateId") as string;
+    const csvFile = formData.get("csvFile") as File;
+
+    // Validate inputs
+    if (!templateId || !csvFile) {
+      return NextResponse.json(
+        { error: "Template ID and CSV file are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    if (!csvFile.name.endsWith(".csv")) {
+      return NextResponse.json(
+        { error: "File must be a CSV file" },
+        { status: 400 }
+      );
+    }
+
+    // Get template metadata
+    const template = await getTemplate(templateId);
+    if (!template) {
+      return NextResponse.json(
+        { error: "Template not found" },
+        { status: 404 }
+      );
+    }
+
+    // Read CSV file content
+    const csvContent = await csvFile.text();
+
+    // Parse and validate CSV
+    const validationResult = parseCsvFile(csvContent, template.mergeFields);
+
+    if (!validationResult.isValid || !validationResult.data) {
+      return NextResponse.json(
+        {
+          error: "CSV validation failed",
+          details: validationResult.errors,
+          warnings: validationResult.warnings,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Download template from Azure Blob Storage (once for all documents)
+    const blobFileName = `${templateId}.docx`;
+    const templateBuffer = await downloadBlob(blobFileName);
+
+    // Handle duplicate filenames
+    const rowsWithUniqueFilenames = handleDuplicateFilenames(
+      validationResult.data.rows
+    );
+
+    // Generate documents for each row
+    const documents: DocumentFile[] = [];
+    const generationErrors: string[] = [];
+
+    for (let i = 0; i < rowsWithUniqueFilenames.length; i++) {
+      const row = rowsWithUniqueFilenames[i];
+
+      try {
+        // Convert row fields to MergeFieldValue array
+        const mergeFields: MergeFieldValue[] = Object.entries(row.fields).map(
+          ([field, value]) => ({
+            field,
+            value,
+          })
+        );
+
+        // Generate document
+        const generatedBuffer = generateDocument(templateBuffer, mergeFields);
+
+        documents.push({
+          filename: row.filename,
+          buffer: generatedBuffer,
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        generationErrors.push(
+          `Failed to generate document for "${row.filename}": ${errorMessage}`
+        );
+        console.error(`Error generating document for row ${i + 1}:`, error);
+      }
+    }
+
+    // Check if we generated any documents
+    if (documents.length === 0) {
+      return NextResponse.json(
+        {
+          error: "Failed to generate any documents",
+          details: generationErrors,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Create ZIP file with all documents
+    const zipBuffer = await createZipFile(documents);
+
+    // Prepare response
+    const timestamp = new Date().toISOString().split("T")[0];
+    const zipFilename = `${template.name.replace(/[^a-zA-Z0-9]/g, "_")}_bulk_${timestamp}.zip`;
+
+    // Return warnings if any documents failed
+    const responseHeaders: HeadersInit = {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${zipFilename}"`,
+    };
+
+    if (generationErrors.length > 0) {
+      responseHeaders["X-Generation-Warnings"] = JSON.stringify({
+        totalRows: rowsWithUniqueFilenames.length,
+        successfulDocuments: documents.length,
+        failedDocuments: generationErrors.length,
+        errors: generationErrors,
+      });
+    }
+
+    return new NextResponse(new Uint8Array(zipBuffer), {
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error("Bulk generate error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to generate documents",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}

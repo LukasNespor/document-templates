@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import HelpDialog from "@/components/HelpDialog";
 import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 import EditTemplateDialog from "@/components/EditTemplateDialog";
+import BulkGenerateDialog from "@/components/BulkGenerateDialog";
 import TemplateForm from "@/components/TemplateForm";
 import { Template, MergeFieldValue } from "@/types";
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -258,6 +260,7 @@ export default function Home() {
               onDeleteTemplate={handleDeleteTemplate}
               onReuploadTemplate={handleReuploadTemplate}
               onHelp={() => setIsHelpOpen(true)}
+              onBulkGenerate={() => setIsBulkGenerateOpen(true)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl border border-gray-200 p-8">
@@ -316,6 +319,13 @@ export default function Home() {
         onEdit={handleEditSubmit}
         template={editingTemplate}
       />
+      {selectedTemplate && (
+        <BulkGenerateDialog
+          isOpen={isBulkGenerateOpen}
+          onClose={() => setIsBulkGenerateOpen(false)}
+          template={selectedTemplate}
+        />
+      )}
     </div>
   );
 }
