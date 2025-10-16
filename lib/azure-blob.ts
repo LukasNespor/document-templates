@@ -3,6 +3,7 @@ import { BlobServiceClient } from "@azure/storage-blob";
 const containerName = "document-templates";
 
 let blobServiceClient: BlobServiceClient;
+let containerExistsPromise: Promise<void> | null = null;
 
 export function getBlobServiceClient(): BlobServiceClient {
   if (!blobServiceClient) {
@@ -14,14 +15,20 @@ export function getBlobServiceClient(): BlobServiceClient {
 }
 
 export async function ensureContainerExists(): Promise<void> {
-  const blobServiceClient = getBlobServiceClient();
-  const containerClient = blobServiceClient.getContainerClient(containerName);
-  try {
-    await containerClient.createIfNotExists();
-  } catch (error) {
-    console.error("Failed to create blob container:", error);
-    throw error;
+  // Cache the promise so we only check once per serverless function instance
+  if (!containerExistsPromise) {
+    containerExistsPromise = (async () => {
+      const blobServiceClient = getBlobServiceClient();
+      const containerClient = blobServiceClient.getContainerClient(containerName);
+      try {
+        await containerClient.createIfNotExists();
+      } catch (error) {
+        console.error("Failed to create blob container:", error);
+        throw error;
+      }
+    })();
   }
+  return containerExistsPromise;
 }
 
 export async function uploadBlob(

@@ -3,6 +3,7 @@ import { TableClient, AzureNamedKeyCredential } from "@azure/data-tables";
 const tableName = "DocumentTemplateStatistics";
 
 let tableClient: TableClient;
+let tableExistsPromise: Promise<void> | null = null;
 
 function getTableClient(): TableClient {
   if (!tableClient) {
@@ -29,23 +30,29 @@ function getTableClient(): TableClient {
 }
 
 async function ensureTableExists(): Promise<void> {
-  const tableClient = getTableClient();
-  try {
-    await tableClient.createTable();
-  } catch (error: any) {
-    // Only ignore "table already exists" errors
-    if (error?.statusCode === 409 || error?.message?.includes("TableAlreadyExists")) {
-      // Table already exists, continue
-    } else {
-      console.error("Failed to create statistics table:", {
-        statusCode: error?.statusCode,
-        message: error?.message,
-        details: error?.details,
-        code: error?.code,
-      });
-      throw error;
-    }
+  // Cache the promise so we only check once per serverless function instance
+  if (!tableExistsPromise) {
+    tableExistsPromise = (async () => {
+      const tableClient = getTableClient();
+      try {
+        await tableClient.createTable();
+      } catch (error: any) {
+        // Only ignore "table already exists" errors
+        if (error?.statusCode === 409 || error?.message?.includes("TableAlreadyExists")) {
+          // Table already exists, continue
+        } else {
+          console.error("Failed to create statistics table:", {
+            statusCode: error?.statusCode,
+            message: error?.message,
+            details: error?.details,
+            code: error?.code,
+          });
+          throw error;
+        }
+      }
+    })();
   }
+  return tableExistsPromise;
 }
 
 async function ensureStatisticsEntity(userId: string): Promise<void> {

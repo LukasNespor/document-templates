@@ -4,6 +4,7 @@ import { User } from "@/types";
 const tableName = "DocumentTemplateUsers";
 
 let tableClient: TableClient;
+let tableExistsPromise: Promise<void> | null = null;
 
 export function getUserTableClient(): TableClient {
   if (!tableClient) {
@@ -22,16 +23,22 @@ export function getUserTableClient(): TableClient {
 }
 
 export async function ensureUserTableExists(): Promise<void> {
-  const tableClient = getUserTableClient();
-  try {
-    await tableClient.createTable();
-  } catch (error: any) {
-    // Only ignore "table already exists" errors
-    if (error?.statusCode !== 409 && !error?.message?.includes("TableAlreadyExists")) {
-      console.error("Failed to create users table:", error);
-      throw error;
-    }
+  // Cache the promise so we only check once per serverless function instance
+  if (!tableExistsPromise) {
+    tableExistsPromise = (async () => {
+      const tableClient = getUserTableClient();
+      try {
+        await tableClient.createTable();
+      } catch (error: any) {
+        // Only ignore "table already exists" errors
+        if (error?.statusCode !== 409 && !error?.message?.includes("TableAlreadyExists")) {
+          console.error("Failed to create users table:", error);
+          throw error;
+        }
+      }
+    })();
   }
+  return tableExistsPromise;
 }
 
 export async function saveUser(user: User): Promise<void> {
