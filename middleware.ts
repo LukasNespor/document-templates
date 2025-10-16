@@ -15,10 +15,30 @@ const sessionOptions = {
 };
 
 // Paths that don't require authentication
-const publicPaths = ["/login", "/api/auth/login"];
+const publicPaths = ["/login", "/setup", "/api/auth/login"];
 
 // API paths that don't require authentication
-const publicApiPaths = ["/api/auth/login"];
+const publicApiPaths = ["/api/auth/login", "/api/setup/check", "/api/setup/initialize"];
+
+// Helper function to check if setup is needed
+async function isSetupNeeded(request: NextRequest): Promise<boolean> {
+  try {
+    const url = new URL("/api/setup/check", request.url);
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      console.error("Error checking setup status in middleware:", response.statusText);
+      return false;
+    }
+
+    const data = await response.json();
+    return data.setupNeeded === true;
+  } catch (error: any) {
+    // On errors, assume setup is not needed to avoid redirect loop
+    console.error("Error checking setup status in middleware:", error);
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -38,7 +58,7 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
 
-    // If not logged in, redirect to login page
+    // If not logged in, check if setup is needed
     if (!session.isLoggedIn) {
       // For API routes, return 401
       if (pathname.startsWith("/api/")) {
@@ -48,7 +68,14 @@ export async function middleware(request: NextRequest) {
         );
       }
 
-      // For pages, redirect to login
+      // For pages, check if setup is needed first
+      const setupNeeded = await isSetupNeeded(request);
+      if (setupNeeded) {
+        const setupUrl = new URL("/setup", request.url);
+        return NextResponse.redirect(setupUrl);
+      }
+
+      // Setup is done, redirect to login
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
@@ -57,12 +84,19 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error("Middleware error:", error);
 
-    // On error, redirect to login
+    // On error, check if setup is needed before redirecting
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { error: "Neautorizováno" },
         { status: 401 }
       );
+    }
+
+    // Check if setup is needed
+    const setupNeeded = await isSetupNeeded(request);
+    if (setupNeeded) {
+      const setupUrl = new URL("/setup", request.url);
+      return NextResponse.redirect(setupUrl);
     }
 
     const loginUrl = new URL("/login", request.url);

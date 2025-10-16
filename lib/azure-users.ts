@@ -134,6 +134,28 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   return null;
 }
 
+export async function hasAnyUser(): Promise<boolean> {
+  const tableClient = getUserTableClient();
+
+  // Use byPage with maxPageSize to fetch only 1 record from Azure
+  const pages = tableClient.listEntities({
+    queryOptions: {
+      filter: `PartitionKey eq 'users'`,
+    },
+  }).byPage({ maxPageSize: 1 });
+
+  // Get the first page (which contains at most 1 record)
+  for await (const page of pages) {
+    // Check if there's at least one entity in the first page
+    for (const entity of page) {
+      return true; // Found at least one user
+    }
+    break; // Only check the first page
+  }
+
+  return false; // No users found
+}
+
 export async function getAllUsers(): Promise<User[]> {
   const tableClient = getUserTableClient();
   const users: User[] = [];
