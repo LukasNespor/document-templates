@@ -45,6 +45,7 @@ export interface User {
   passwordHash: string;
   createdAt: string;
   salutation?: string;
+  isAdmin?: boolean;
 }
 
 export interface SessionData {
@@ -52,4 +53,5 @@ export interface SessionData {
   username: string;
   isLoggedIn: boolean;
   salutation?: string;
+  isAdmin?: boolean;
 }

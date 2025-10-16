@@ -53,13 +53,14 @@ export async function isAuthenticated(): Promise<boolean> {
 /**
  * Get the current user from session
  */
-export async function getCurrentUser(): Promise<{ userId: string; username: string; salutation?: string } | null> {
+export async function getCurrentUser(): Promise<{ userId: string; username: string; salutation?: string; isAdmin?: boolean } | null> {
   const session = await getSession();
   if (session.isLoggedIn && session.userId && session.username) {
     return {
       userId: session.userId,
       username: session.username,
       salutation: session.salutation,
+      isAdmin: session.isAdmin,
     };
   }
   return null;

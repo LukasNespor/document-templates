@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     session.userId = user.id;
     session.username = user.username;
     session.salutation = user.salutation;
+    session.isAdmin = user.isAdmin;
     session.isLoggedIn = true;
     await session.save();
 
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         username: user.username,
         salutation: user.salutation,
+        isAdmin: user.isAdmin,
       },
     });
   } catch (error) {

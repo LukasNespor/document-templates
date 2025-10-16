@@ -1,6 +1,6 @@
 /**
  * Script to create a new user
- * Run with: npx tsx scripts/create-user.ts <username> <password>
+ * Run with: npx tsx scripts/create-user.ts <username> <password> [--admin]
  */
 
 import dotenv from "dotenv";
@@ -31,9 +31,12 @@ function validateEnvironment(): boolean {
   return true;
 }
 
-async function createUser(username: string, password: string) {
+async function createUser(username: string, password: string, isAdmin: boolean = false) {
   try {
     console.log(`Creating user: ${username}`);
+    if (isAdmin) {
+      console.log("User will be created with admin privileges");
+    }
 
     const passwordHash = await hashPassword(password);
 
@@ -42,6 +45,7 @@ async function createUser(username: string, password: string) {
       username,
       passwordHash,
       createdAt: new Date().toISOString(),
+      isAdmin,
     };
 
     await saveUser(user);
@@ -49,6 +53,7 @@ async function createUser(username: string, password: string) {
     console.log("User created successfully!");
     console.log(`Username: ${username}`);
     console.log(`User ID: ${user.id}`);
+    console.log(`Admin: ${isAdmin}`);
   } catch (error) {
     console.error("Error creating user:", error);
     process.exit(1);
@@ -63,12 +68,12 @@ if (!validateEnvironment()) {
 // Get arguments from command line
 const args = process.argv.slice(2);
 
-if (args.length !== 2) {
-  console.error("Usage: npx tsx scripts/create-user.ts <username> <password>");
+if (args.length < 2 || args.length > 3) {
+  console.error("Usage: npx tsx scripts/create-user.ts <username> <password> [--admin]");
   process.exit(1);
 }
 
-const [username, password] = args;
+const [username, password, adminFlag] = args;
 
 if (!username || !password) {
   console.error("Both username and password are required");
@@ -80,4 +85,11 @@ if (password.length < 6) {
   process.exit(1);
 }
 
-createUser(username, password);
+const isAdmin = adminFlag === "--admin";
+
+if (adminFlag && !isAdmin) {
+  console.error("Invalid flag. Use --admin to create an admin user");
+  process.exit(1);
+}
+
+createUser(username, password, isAdmin);

@@ -10,6 +10,7 @@ import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 import EditTemplateDialog from "@/components/EditTemplateDialog";
 import BulkGenerateDialog from "@/components/BulkGenerateDialog";
 import ProfileDialog from "@/components/ProfileDialog";
+import UserManagementDialog from "@/components/UserManagementDialog";
 import TemplateForm from "@/components/TemplateForm";
 import { Template, FieldValue, Statistics } from "@/types";
 
@@ -31,6 +32,9 @@ export default function Home() {
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [salutation, setSalutation] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string>("");
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
   // Check if desktop on mount and resize
   useEffect(() => {
@@ -62,6 +66,8 @@ export default function Home() {
       if (data.isLoggedIn && data.user) {
         setUsername(data.user.username);
         setSalutation(data.user.salutation || null);
+        setIsAdmin(data.user.isAdmin || false);
+        setUserId(data.user.userId || "");
       }
     } catch (error) {
       console.error("Failed to check session:", error);
@@ -343,8 +349,10 @@ export default function Home() {
         onHelp={() => setIsHelpOpen(true)}
         onHome={() => setSelectedTemplateId(null)}
         username={username || undefined}
+        isAdmin={isAdmin}
         onLogout={handleLogout}
         onProfileClick={() => setIsProfileOpen(true)}
+        onManageUsers={() => setIsUserManagementOpen(true)}
       />
 
       <div>
@@ -506,6 +514,11 @@ export default function Home() {
         currentUsername={username || ""}
         currentSalutation={salutation || undefined}
         onProfileUpdate={handleProfileUpdate}
+      />
+      <UserManagementDialog
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        currentUserId={userId}
       />
     </div>
   );
