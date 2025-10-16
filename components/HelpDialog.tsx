@@ -250,8 +250,17 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
                   dokument1;123;Jan Novák<br />
                   dokument2;456;Firma s.r.o.
                 </div>
-                <p className="text-gray-600 mt-3">
-                  Pokud vidíte čárky místo středníků, použijte funkci Najít a nahradit (Ctrl+H) v textovém editoru a nahraďte všechny čárky středníky.
+                <p className="text-gray-600 mt-3 mb-2">
+                  <strong>Pokud Excel použil čárky místo středníků:</strong>
+                </p>
+                <div className="text-gray-600 space-y-2 text-sm">
+                  <div>1. V Excelu přejděte do <strong>Soubor</strong> → <strong>Možnosti</strong> → <strong>Upřesnit</strong></div>
+                  <div>2. Odškrtněte <strong>Použít oddělovače systému</strong></div>
+                  <div>3. Nastavte <strong>Oddělovač desetinných míst:</strong> čárka (,) a <strong>Oddělovač tisíců:</strong> mezera</div>
+                  <div>4. Uložte nastavení a znovu exportujte soubor jako CSV</div>
+                </div>
+                <p className="text-red-600 mt-3 text-sm">
+                  <strong>⚠️ Nepoužívajte funkci Najít a nahradit</strong> pro změnu čárek na středníky - zničilo by to data obsahující čárky (adresy, názvy firem apod.)!
                 </p>
               </div>
 

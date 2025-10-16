@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp, Search, X, ChevronLeft } from "lucide-react";
+import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp, Search, X, ChevronLeft, Upload } from "lucide-react";
 import { Template, TemplateGroup } from "@/types";
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   onWidthChange?: (width: number) => void;
+  onAddTemplate?: () => void;
 }
 
 export default function Sidebar({
@@ -20,6 +21,7 @@ export default function Sidebar({
   isOpen,
   onToggle,
   onWidthChange,
+  onAddTemplate,
 }: SidebarProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sidebarWidth, setSidebarWidth] = useState(346); // 20% wider than 288px
@@ -242,8 +244,14 @@ export default function Sidebar({
                     </>
                   ) : (
                     <>
-                      <p className="text-gray-500 text-sm font-medium">Zatím žádné šablony</p>
-                      <p className="text-gray-400 text-xs mt-1">Nahrajte svou první šablonu</p>
+                      <p className="text-gray-500 text-sm font-medium mb-3">Zatím žádné šablony</p>
+                      <button
+                        onClick={onAddTemplate}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Nahrajte svou první šablonu
+                      </button>
                     </>
                   )}
                 </div>

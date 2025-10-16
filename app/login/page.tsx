@@ -9,7 +9,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const router = useRouter();
+
+  const validateUsername = (value: string) => {
+    if (!value) {
+      setUsernameError("");
+      return;
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!usernameRegex.test(value)) {
+      setUsernameError("Uživatelské jméno může obsahovat pouze písmena, čísla, tečku, podtržítko a pomlčku");
+    } else {
+      setUsernameError("");
+    }
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    validateUsername(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,10 +40,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Validate username format
-    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
-    if (!usernameRegex.test(username)) {
-      setError("Uživatelské jméno může obsahovat pouze písmena, čísla, tečku, podtržítko a pomlčku");
+    if (usernameError) {
       return;
     }
 
@@ -65,9 +82,9 @@ export default function LoginPage() {
                 <Lock className="w-8 h-8" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-center">Přihlášení</h1>
+            <h1 className="text-3xl font-bold text-center">Šablony dokumentů</h1>
             <p className="text-blue-100 text-center mt-2">
-              Word šablony - Správa dokumentů
+              Přihlášení do aplikace
             </p>
           </div>
 
@@ -75,7 +92,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="p-8">
             <div className="space-y-5">
               {/* Username field */}
-              <div>
+              <div suppressHydrationWarning>
                 <label
                   htmlFor="username"
                   className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2"
@@ -87,20 +104,24 @@ export default function LoginPage() {
                   type="text"
                   id="username"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    usernameError
+                      ? "border-red-300 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
                   placeholder="Zadejte uživatelské jméno"
                   disabled={isLoading}
                   autoComplete="username"
                   autoFocus
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Pouze písmena, čísla, tečka (.), podtržítko (_) a pomlčka (-)
-                </p>
+                {usernameError && (
+                  <p className="text-xs text-red-600 mt-1">{usernameError}</p>
+                )}
               </div>
 
               {/* Password field */}
-              <div>
+              <div suppressHydrationWarning>
                 <label
                   htmlFor="password"
                   className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2"
@@ -131,7 +152,7 @@ export default function LoginPage() {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={isLoading || !username || !password}
+                disabled={isLoading || !username || !password || !!usernameError}
                 className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
@@ -152,7 +173,7 @@ export default function LoginPage() {
 
         {/* Footer info */}
         <p className="text-center text-gray-500 text-sm mt-6">
-          Aplikace pro správu a generování Word dokumentů
+          Aplikace pro generování dokumentů ze šablon
         </p>
       </div>
     </div>

@@ -242,7 +242,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">Hromadné generování z CSV</h3>
-                  <p className="text-sm text-gray-600">Vygenerujte více dokumentů najednou ze CSV souboru</p>
+                  <p className="text-sm text-gray-600">Vygenerujte více dokumentů najednou z CSV souboru</p>
                 </div>
               </div>
               <button
@@ -352,7 +352,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
           {/* Generate Single Document Button */}
           <button
             type="submit"
-            disabled={isGenerating || template.fields.length === 0}
+            disabled={isGenerating || template.fields.length === 0 || !fileName.trim()}
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3.5 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-lg"
           >
             {isGenerating ? (

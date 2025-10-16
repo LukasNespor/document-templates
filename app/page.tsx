@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, FileText, Upload, Sparkles, TrendingUp, FileCheck, Hash, Calendar, Clock } from "lucide-react";
+import { Loader2, FileText, Upload, Sparkles, TrendingUp, FileCheck, Hash, Calendar, Clock, Info } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
 import HelpDialog from "@/components/HelpDialog";
@@ -364,6 +364,7 @@ export default function Home() {
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
           onWidthChange={setSidebarWidth}
+          onAddTemplate={() => setIsUploadOpen(true)}
         />
 
         {/* Main Content */}
@@ -398,15 +399,25 @@ export default function Home() {
               </div>
 
               <h2 className="text-3xl font-bold text-gray-800 mb-3 flex items-center gap-3">
-                {salutation ? `Vítej ${salutation}` : "Vítejte v Šablonách dokumentů"}
+                {salutation ? `Vítejte, ${salutation}` : "Vítejte v Šablonách dokumentů"}
                 <Sparkles className="w-7 h-7 text-yellow-500" />
               </h2>
 
               <p className="text-gray-600 text-base mb-6 text-center max-w-2xl leading-relaxed">
                 {templates.length === 0
-                  ? "Transformujte svůj pracovní postup s dokumenty! Nahrajte Word šablony s poli pro hromadnou korespondenci a generujte přizpůsobené dokumenty během okamžiku."
+                  ? "Transformujte svůj pracovní postup s dokumenty! Nahrajte Word šablony s proměnnými a generujte přizpůsobené dokumenty během okamžiku."
                   : "Vyberte šablonu z postranního panelu, vyplňte pole a vygenerujte svůj přizpůsobený dokument."}
               </p>
+
+              {templates.length === 0 && (
+                <button
+                  onClick={() => setIsUploadOpen(true)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-base group mb-6"
+                >
+                  <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Nahrajte svou první šablonu
+                </button>
+              )}
 
               {/* Statistics Section */}
               {statistics && (
@@ -417,7 +428,16 @@ export default function Home() {
                       <FileText className="w-5 h-5 text-blue-600" />
                     </div>
                     <div className="text-2xl font-bold text-gray-800">{statistics.currentTemplateCount}</div>
-                    <div className="text-xs text-gray-600 mt-1">Aktuální šablony</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Aktuální šablony
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Počet vašich aktuálních šablon
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Total Templates Created */}
@@ -426,7 +446,16 @@ export default function Home() {
                       <TrendingUp className="w-5 h-5 text-green-600" />
                     </div>
                     <div className="text-2xl font-bold text-gray-800">{statistics.totalTemplatesCreated}</div>
-                    <div className="text-xs text-gray-600 mt-1">Vytvořené šablony</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Vytvořené šablony
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Celkový počet vašich vytvořených šablon včetně smazaných
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Files Generated */}
@@ -435,7 +464,16 @@ export default function Home() {
                       <FileCheck className="w-5 h-5 text-purple-600" />
                     </div>
                     <div className="text-2xl font-bold text-gray-800">{statistics.totalFilesGenerated}</div>
-                    <div className="text-xs text-gray-600 mt-1">Vygenerované dokumenty</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Vygenerované dokumenty
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Celkový počet vašich vygenerovaných dokumentů ze šablon
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Fields Filled */}
@@ -444,7 +482,16 @@ export default function Home() {
                       <Hash className="w-5 h-5 text-orange-600" />
                     </div>
                     <div className="text-2xl font-bold text-gray-800">{statistics.totalFieldsFilled}</div>
-                    <div className="text-xs text-gray-600 mt-1">Vyplněná pole</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Vyplněná pole
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Celkový počet vašich vyplněných polí napříč všemi dokumenty
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Saved Time */}
@@ -455,7 +502,16 @@ export default function Home() {
                     <div className="text-2xl font-bold text-gray-800">
                       {formatSavedTime(statistics.savedTimeSeconds)}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">Ušetřený čas</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Ušetřený čas
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Váš odhadovaný ušetřený čas použitím šablon. Počítáno jako: 30s za dokument (kopírování, otevření) + 20s za každé vyplněné pole
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Last Generation */}
@@ -468,19 +524,18 @@ export default function Home() {
                         ? new Date(statistics.lastGenerationDate).toLocaleDateString("cs-CZ")
                         : "Nikdy"}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">Poslední generování</div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      Poslední generování
+                      <div className="group relative inline-block">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        <div className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg z-10">
+                          Datum vašeho posledního vygenerování dokumentu
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {templates.length === 0 && (
-                <button
-                  onClick={() => setIsUploadOpen(true)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-base group"
-                >
-                  <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  Nahrajte svou první šablonu
-                </button>
               )}
             </div>
           )}
