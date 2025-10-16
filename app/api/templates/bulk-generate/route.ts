@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get template metadata
-    const template = await getTemplate(templateId);
+    const template = await getTemplate(currentUser.userId, templateId);
     if (!template) {
       return NextResponse.json(
         { error: "Šablona nenalezena" },

@@ -60,7 +60,7 @@ Passwords are hashed using bcrypt (one-way encryption) and cannot be recovered.
 
 - **Azure Blob Storage**: Stores actual .docx template files in container named "document-templates"
 - **Azure Table Storage**:
-  - `DocumentTemplates` table: Stores template metadata with partition key "templates" and row key as template ID
+  - `DocumentTemplates` table: Stores template metadata with partition key as userId and row key as template ID (provides optimal query performance and natural data isolation per user)
   - `DocumentTemplateUsers` table: Stores user accounts with partition key "users" and row key as user ID
   - `DocumentTemplateStatistics` table: Stores user statistics with partition key "statistics" and row key as user ID
 

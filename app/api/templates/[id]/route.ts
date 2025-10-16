@@ -10,7 +10,16 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const template = await getTemplate(id);
+    // Get current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Neautorizováno" },
+        { status: 401 }
+      );
+    }
+
+    const template = await getTemplate(currentUser.userId, id);
 
     if (!template) {
       return NextResponse.json(
@@ -46,7 +55,7 @@ export async function PATCH(
     }
 
     // Get template to check ownership
-    const template = await getTemplate(id);
+    const template = await getTemplate(currentUser.userId, id);
     if (!template) {
       return NextResponse.json(
         { error: "Šablona nenalezena" },
@@ -54,13 +63,7 @@ export async function PATCH(
       );
     }
 
-    // Check if user owns this template
-    if (template.uploadedBy !== currentUser.userId) {
-      return NextResponse.json(
-        { error: "Nemáte oprávnění upravit tuto šablonu" },
-        { status: 403 }
-      );
-    }
+    // No need to check ownership - partition key ensures user can only access their own templates
 
     const body = await request.json();
 
@@ -100,7 +103,7 @@ export async function PATCH(
     if (note !== undefined) updates.note = note;
     if (group !== undefined) updates.group = group;
 
-    await updateTemplate(id, updates);
+    await updateTemplate(currentUser.userId, id, updates);
 
     return NextResponse.json(
       { message: "Šablona úspěšně aktualizována" },
@@ -131,8 +134,8 @@ export async function DELETE(
       );
     }
 
-    // Get template to find blob filename and check ownership
-    const template = await getTemplate(id);
+    // Get template to find blob filename
+    const template = await getTemplate(currentUser.userId, id);
 
     if (!template) {
       return NextResponse.json(
@@ -141,13 +144,7 @@ export async function DELETE(
       );
     }
 
-    // Check if user owns this template
-    if (template.uploadedBy !== currentUser.userId) {
-      return NextResponse.json(
-        { error: "Nemáte oprávnění smazat tuto šablonu" },
-        { status: 403 }
-      );
-    }
+    // No need to check ownership - partition key ensures user can only access their own templates
 
     // Extract filename from blob URL
     const blobFileName = `${id}.docx`;
@@ -155,7 +152,7 @@ export async function DELETE(
     // Delete from both blob storage and table storage
     await Promise.all([
       deleteBlob(blobFileName),
-      deleteTemplate(id)
+      deleteTemplate(currentUser.userId, id)
     ]);
 
     return NextResponse.json(

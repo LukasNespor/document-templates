@@ -54,7 +54,7 @@ export async function saveTemplate(template: Template): Promise<void> {
 
   const tableClient = getTableClient();
   const entity = {
-    partitionKey: "templates",
+    partitionKey: template.uploadedBy, // Use userId as partition key
     rowKey: template.id,
     name: template.name,
     note: template.note,
@@ -68,11 +68,11 @@ export async function saveTemplate(template: Template): Promise<void> {
   await tableClient.upsertEntity(entity);
 }
 
-export async function getTemplate(id: string): Promise<Template | null> {
+export async function getTemplate(userId: string, id: string): Promise<Template | null> {
   const tableClient = getTableClient();
 
   try {
-    const entity = await tableClient.getEntity("templates", id);
+    const entity = await tableClient.getEntity(userId, id);
     return {
       id: entity.rowKey as string,
       name: entity.name as string,
@@ -88,47 +88,15 @@ export async function getTemplate(id: string): Promise<Template | null> {
   }
 }
 
-export async function getAllTemplates(): Promise<Template[]> {
-  await ensureTableExists();
-  const tableClient = getTableClient();
-  const templates: Template[] = [];
-
-  try {
-    const entities = tableClient.listEntities({
-      queryOptions: { filter: `PartitionKey eq 'templates'` },
-    });
-
-    for await (const entity of entities) {
-      templates.push({
-        id: entity.rowKey as string,
-        name: entity.name as string,
-        note: entity.note as string,
-        group: entity.group as string,
-        blobUrl: entity.blobUrl as string,
-        fields: JSON.parse(entity.fields as string),
-        createdAt: entity.createdAt as string,
-        uploadedBy: entity.uploadedBy as string,
-      });
-    }
-  } catch (error: any) {
-    // If table doesn't exist, just return empty array
-    if (error?.statusCode === 404) {
-      return [];
-    }
-    throw error;
-  }
-
-  return templates;
-}
-
 export async function getTemplatesByUser(userId: string): Promise<Template[]> {
   await ensureTableExists();
   const tableClient = getTableClient();
   const templates: Template[] = [];
 
   try {
+    // Direct partition query - much more efficient!
     const entities = tableClient.listEntities({
-      queryOptions: { filter: `PartitionKey eq 'templates' and uploadedBy eq '${userId}'` },
+      queryOptions: { filter: `PartitionKey eq '${userId}'` },
     });
 
     for await (const entity of entities) {
@@ -155,13 +123,14 @@ export async function getTemplatesByUser(userId: string): Promise<Template[]> {
 }
 
 export async function updateTemplate(
+  userId: string,
   id: string,
   updates: Partial<Pick<Template, "name" | "note" | "group" | "fields" | "blobUrl">>
 ): Promise<void> {
   const tableClient = getTableClient();
 
   try {
-    const entity = await tableClient.getEntity("templates", id);
+    const entity = await tableClient.getEntity(userId, id);
     const updatedEntity: any = {
       ...entity,
       ...updates,
@@ -178,11 +147,11 @@ export async function updateTemplate(
   }
 }
 
-export async function deleteTemplate(id: string): Promise<void> {
+export async function deleteTemplate(userId: string, id: string): Promise<void> {
   const tableClient = getTableClient();
 
   try {
-    await tableClient.deleteEntity("templates", id);
+    await tableClient.deleteEntity(userId, id);
   } catch (error) {
     throw new Error(`Failed to delete template: ${error}`);
   }

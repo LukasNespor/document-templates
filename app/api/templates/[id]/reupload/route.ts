@@ -21,7 +21,7 @@ export async function PUT(
     }
 
     // Check if template exists
-    const existingTemplate = await getTemplate(id);
+    const existingTemplate = await getTemplate(currentUser.userId, id);
 
     if (!existingTemplate) {
       return NextResponse.json(
@@ -30,13 +30,7 @@ export async function PUT(
       );
     }
 
-    // Check if user owns this template
-    if (existingTemplate.uploadedBy !== currentUser.userId) {
-      return NextResponse.json(
-        { error: "Nemáte oprávnění znovu nahrát tuto šablonu" },
-        { status: 403 }
-      );
-    }
+    // No need to check ownership - partition key ensures user can only access their own templates
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -68,7 +62,7 @@ export async function PUT(
     const blobUrl = await uploadBlob(fileName, buffer);
 
     // Update template metadata with new fields
-    await updateTemplate(id, {
+    await updateTemplate(currentUser.userId, id, {
       fields,
       blobUrl,
     });
