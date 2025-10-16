@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Edit2, X, FileText, FolderOpen, StickyNote, AlertCircle, Loader2 } from "lucide-react";
 import { Template } from "@/types";
 
@@ -22,6 +22,7 @@ export default function EditTemplateDialog({
   const [group, setGroup] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
+  const mouseDownOnBackdrop = useRef(false);
 
   useEffect(() => {
     if (template) {
@@ -65,10 +66,20 @@ export default function EditTemplateDialog({
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
       style={{ zIndex: 10000 }}
-      onClick={handleClose}
+      onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
+      onClick={() => {
+        if (mouseDownOnBackdrop.current) {
+          handleClose();
+        }
+        mouseDownOnBackdrop.current = false;
+      }}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          mouseDownOnBackdrop.current = false;
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6">

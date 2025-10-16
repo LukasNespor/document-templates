@@ -44,10 +44,12 @@ export interface User {
   username: string;
   passwordHash: string;
   createdAt: string;
+  salutation?: string;
 }
 
 export interface SessionData {
   userId: string;
   username: string;
   isLoggedIn: boolean;
+  salutation?: string;
 }

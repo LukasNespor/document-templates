@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     session.userId = user.id;
     session.username = user.username;
+    session.salutation = user.salutation;
     session.isLoggedIn = true;
     await session.save();
 
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: user.id,
         username: user.username,
+        salutation: user.salutation,
       },
     });
   } catch (error) {

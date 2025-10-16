@@ -9,6 +9,7 @@ import HelpDialog from "@/components/HelpDialog";
 import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 import EditTemplateDialog from "@/components/EditTemplateDialog";
 import BulkGenerateDialog from "@/components/BulkGenerateDialog";
+import ProfileDialog from "@/components/ProfileDialog";
 import TemplateForm from "@/components/TemplateForm";
 import { Template, FieldValue, Statistics } from "@/types";
 
@@ -21,6 +22,7 @@ export default function Home() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +30,7 @@ export default function Home() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [salutation, setSalutation] = useState<string | null>(null);
 
   // Check if desktop on mount and resize
   useEffect(() => {
@@ -58,6 +61,7 @@ export default function Home() {
       const data = await response.json();
       if (data.isLoggedIn && data.user) {
         setUsername(data.user.username);
+        setSalutation(data.user.salutation || null);
       }
     } catch (error) {
       console.error("Failed to check session:", error);
@@ -71,6 +75,11 @@ export default function Home() {
     } catch (error) {
       console.error("Logout failed:", error);
     }
+  };
+
+  const handleProfileUpdate = (newUsername: string, newSalutation?: string) => {
+    setUsername(newUsername);
+    setSalutation(newSalutation || null);
   };
 
   // Load selected template details when selection changes
@@ -335,6 +344,7 @@ export default function Home() {
         onHome={() => setSelectedTemplateId(null)}
         username={username || undefined}
         onLogout={handleLogout}
+        onProfileClick={() => setIsProfileOpen(true)}
       />
 
       <div>
@@ -380,7 +390,7 @@ export default function Home() {
               </div>
 
               <h2 className="text-3xl font-bold text-gray-800 mb-3 flex items-center gap-3">
-                Vítejte v Šablonách dokumentů
+                {salutation ? `Vítej ${salutation}` : "Vítejte v Šablonách dokumentů"}
                 <Sparkles className="w-7 h-7 text-yellow-500" />
               </h2>
 
@@ -490,6 +500,13 @@ export default function Home() {
           template={selectedTemplate}
         />
       )}
+      <ProfileDialog
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        currentUsername={username || ""}
+        currentSalutation={salutation || undefined}
+        onProfileUpdate={handleProfileUpdate}
+      />
     </div>
   );
 }

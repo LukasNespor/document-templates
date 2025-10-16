@@ -44,9 +44,45 @@ export async function saveUser(user: User): Promise<void> {
     username: user.username,
     passwordHash: user.passwordHash,
     createdAt: user.createdAt,
+    salutation: user.salutation || "",
   };
 
   await tableClient.upsertEntity(entity);
+}
+
+export async function updateUser(
+  userId: string,
+  updates: { username?: string; passwordHash?: string; salutation?: string }
+): Promise<User> {
+  const tableClient = getUserTableClient();
+
+  // Get existing user
+  const existingUser = await getUserById(userId);
+  if (!existingUser) {
+    throw new Error("User not found");
+  }
+
+  // Apply updates
+  const updatedUser: User = {
+    ...existingUser,
+    ...(updates.username !== undefined && { username: updates.username }),
+    ...(updates.passwordHash !== undefined && { passwordHash: updates.passwordHash }),
+    ...(updates.salutation !== undefined && { salutation: updates.salutation }),
+  };
+
+  // Save updated user
+  const entity = {
+    partitionKey: "users",
+    rowKey: updatedUser.id,
+    username: updatedUser.username,
+    passwordHash: updatedUser.passwordHash,
+    createdAt: updatedUser.createdAt,
+    salutation: updatedUser.salutation || "",
+  };
+
+  await tableClient.upsertEntity(entity);
+
+  return updatedUser;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
@@ -59,6 +95,7 @@ export async function getUserById(id: string): Promise<User | null> {
       username: entity.username as string,
       passwordHash: entity.passwordHash as string,
       createdAt: entity.createdAt as string,
+      salutation: (entity.salutation as string) || undefined,
     };
   } catch (error) {
     return null;
@@ -78,6 +115,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       username: entity.username as string,
       passwordHash: entity.passwordHash as string,
       createdAt: entity.createdAt as string,
+      salutation: (entity.salutation as string) || undefined,
     };
   }
 
@@ -98,6 +136,7 @@ export async function getAllUsers(): Promise<User[]> {
       username: entity.username as string,
       passwordHash: entity.passwordHash as string,
       createdAt: entity.createdAt as string,
+      salutation: (entity.salutation as string) || undefined,
     });
   }
 

@@ -20,6 +20,13 @@ export default function LoginPage() {
       return;
     }
 
+    // Validate username format
+    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!usernameRegex.test(username)) {
+      setError("Uživatelské jméno může obsahovat pouze písmena, čísla, tečku, podtržítko a pomlčku");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -87,6 +94,9 @@ export default function LoginPage() {
                   autoComplete="username"
                   autoFocus
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Pouze písmena, čísla, tečka (.), podtržítko (_) a pomlčka (-)
+                </p>
               </div>
 
               {/* Password field */}

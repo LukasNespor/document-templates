@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 
 interface HelpDialogProps {
@@ -10,6 +10,7 @@ interface HelpDialogProps {
 
 export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const mouseDownOnBackdrop = useRef(false);
 
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
@@ -21,11 +22,21 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
       style={{ zIndex: 10000 }}
-      onClick={onClose}
+      onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
+      onClick={() => {
+        if (mouseDownOnBackdrop.current) {
+          onClose();
+        }
+        mouseDownOnBackdrop.current = false;
+      }}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
         style={{ maxWidth: "874px" }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          mouseDownOnBackdrop.current = false;
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
@@ -253,15 +264,6 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
-              <button
-                onClick={onClose}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-lg hover:shadow-xl"
-              >
-                Zavřít
-              </button>
             </div>
           </div>
         </div>

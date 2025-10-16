@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Upload, X, FileText, FolderOpen, StickyNote, AlertCircle, Loader2 } from "lucide-react";
 
 interface UploadTemplateDialogProps {
@@ -20,6 +20,7 @@ export default function UploadTemplateDialog({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const mouseDownOnBackdrop = useRef(false);
 
   if (!isOpen) return null;
 
@@ -76,10 +77,20 @@ export default function UploadTemplateDialog({
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
       style={{ zIndex: 10000 }}
-      onClick={handleClose}
+      onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
+      onClick={() => {
+        if (mouseDownOnBackdrop.current) {
+          handleClose();
+        }
+        mouseDownOnBackdrop.current = false;
+      }}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          mouseDownOnBackdrop.current = false;
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">

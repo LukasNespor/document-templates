@@ -8,9 +8,10 @@ interface TopBarProps {
   onHome: () => void;
   username?: string;
   onLogout?: () => void;
+  onProfileClick?: () => void;
 }
 
-export default function TopBar({ onAddTemplate, onHelp, onHome, username, onLogout }: TopBarProps) {
+export default function TopBar({ onAddTemplate, onHelp, onHome, username, onLogout, onProfileClick }: TopBarProps) {
   return (
     <div
       className="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg z-50"
@@ -47,10 +48,14 @@ export default function TopBar({ onAddTemplate, onHelp, onHome, username, onLogo
 
           {username && (
             <>
-              <div className="bg-blue-800/50 px-4 py-2.5 rounded-lg flex items-center gap-2 backdrop-blur-sm">
+              <button
+                onClick={onProfileClick}
+                className="bg-blue-800/50 hover:bg-blue-800 px-4 py-2.5 rounded-lg flex items-center gap-2 backdrop-blur-sm transition-all cursor-pointer"
+                title="Změnit profil"
+              >
                 <User className="w-5 h-5" />
                 <span className="hidden sm:inline font-medium">{username}</span>
-              </div>
+              </button>
 
               {onLogout && (
                 <button

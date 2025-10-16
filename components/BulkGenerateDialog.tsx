@@ -31,6 +31,7 @@ export default function BulkGenerateDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mouseDownOnBackdrop = useRef(false);
 
   if (!isOpen) return null;
 
@@ -202,10 +203,20 @@ export default function BulkGenerateDialog({
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
       style={{ zIndex: 10000 }}
-      onClick={handleClose}
+      onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
+      onClick={() => {
+        if (mouseDownOnBackdrop.current) {
+          handleClose();
+        }
+        mouseDownOnBackdrop.current = false;
+      }}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          mouseDownOnBackdrop.current = false;
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
