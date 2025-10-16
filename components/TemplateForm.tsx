@@ -97,6 +97,45 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
     }
   };
 
+  const normalizeFilename = (filename: string): string => {
+    // Remove accents using NFD normalization and removing combining diacritical marks
+    const normalized = filename
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    // Replace any remaining non-alphanumeric characters (except dots, hyphens, and spaces) with underscores
+    const safe = normalized.replace(/[^a-zA-Z0-9.\-\s]/g, "_");
+
+    // Replace multiple underscores or spaces with a single underscore
+    return safe.replace(/[_\s]+/g, "_");
+  };
+
+  const handleDownloadOriginal = async () => {
+    try {
+      const response = await fetch(`/api/templates/${template.id}/download`);
+      if (!response.ok) {
+        throw new Error("Stažení šablony selhalo");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${normalizeFilename(template.name)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Nepodařilo se stáhnout šablonu"
+      );
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
       {/* Hidden file input */}
@@ -140,6 +179,14 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={handleDownloadOriginal}
+                    className="px-3 py-2 bg-white hover:bg-purple-50 rounded-lg transition-all border border-gray-200 hover:border-purple-300 group shadow-sm hover:shadow flex items-center gap-2"
+                    title="Stáhnout originál šablony"
+                  >
+                    <Download className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium text-purple-700 hidden sm:inline">Stáhnout originál</span>
+                  </button>
                   <button
                     onClick={handleReuploadClick}
                     disabled={isReuploading}

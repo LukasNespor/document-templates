@@ -6,6 +6,7 @@ import { parseCsvFile, handleDuplicateFilenames } from "@/lib/csv-processor";
 import { createZipFile, DocumentFile } from "@/lib/zip-generator";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeFilename } from "@/lib/filename-utils";
 import { FieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare response
     const timestamp = new Date().toISOString().split("T")[0];
-    const zipFilename = `${template.name.replace(/[^a-zA-Z0-9]/g, "_")}_bulk_${timestamp}.zip`;
+    const zipFilename = `${normalizeFilename(template.name)}_bulk_${timestamp}.zip`;
 
     // Return warnings if any documents failed
     const responseHeaders: HeadersInit = {

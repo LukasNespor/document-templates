@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { normalizeFilename } from "./filename-utils";
 
 export interface CsvRow {
   filename: string;
@@ -166,14 +167,16 @@ export function parseCsvFile(
 }
 
 /**
- * Sanitize filename by removing illegal characters
- * Allowed: letters, numbers, spaces, hyphens, underscores, dots, parentheses
+ * Sanitize filename by removing illegal characters and normalizing accents
+ * Allowed: letters, numbers, spaces, hyphens, underscores, dots
  */
 function sanitizeFilename(filename: string): string {
-  return filename
-    .trim()
+  // First normalize accents and special characters
+  const normalized = normalizeFilename(filename);
+
+  // Then remove any remaining illegal characters for file systems
+  return normalized
     .replace(/[/\\:*?"<>|]/g, "") // Remove illegal characters
-    .replace(/\s+/g, " ") // Normalize whitespace
     .substring(0, 200); // Limit length
 }
 

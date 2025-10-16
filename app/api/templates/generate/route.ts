@@ -4,6 +4,7 @@ import { downloadBlob } from "@/lib/azure-blob";
 import { generateDocument } from "@/lib/docx-processor";
 import { incrementFilesGenerated } from "@/lib/azure-statistics";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeFilename } from "@/lib/filename-utils";
 import { FieldValue } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -54,10 +55,10 @@ export async function POST(request: NextRequest) {
       console.error("Failed to update statistics:", error)
     );
 
-    // Use provided fileName or fallback to template name
+    // Use provided fileName or fallback to template name with normalization
     const downloadFileName = fileName
-      ? `${fileName}.docx`
-      : `${template.name.replace(/[^a-zA-Z0-9]/g, "_")}_generated.docx`;
+      ? `${normalizeFilename(fileName)}.docx`
+      : `${normalizeFilename(template.name)}_generated.docx`;
 
     // Return the generated document as a download
     return new NextResponse(new Uint8Array(generatedBuffer), {
