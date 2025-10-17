@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllUsers, saveUser } from "@/lib/azure-users";
 import { hashPassword } from "@/lib/auth";
+import { validateCredentials } from "@/lib/validation";
+import { AUTH_ERRORS, logAuthError } from "@/lib/auth-errors";
 import { v4 as uuidv4 } from "uuid";
 
 // GET /api/admin/users - List all users
@@ -29,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({ users: sanitizedUsers });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    logAuthError("Admin list users endpoint", error);
     return NextResponse.json(
       { error: "Při načítání uživatelů došlo k chybě" },
       { status: 500 }
@@ -52,24 +54,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, password, salutation, isAdmin } = body;
 
-    // Validate input
-    if (!username || !password) {
+    // Validate input using centralized validation
+    const validation = validateCredentials(username, password);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Uživatelské jméno a heslo jsou povinné" },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Heslo musí mít alespoň 6 znaků" },
+        { error: validation.error },
         { status: 400 }
       );
     }
 
     // Check if user already exists
     const existingUsers = await getAllUsers();
-    if (existingUsers.some(u => u.username === username)) {
+    const trimmedUsername = username.trim();
+    if (existingUsers.some(u => u.username === trimmedUsername)) {
       return NextResponse.json(
         { error: "Uživatel s tímto jménem již existuje" },
         { status: 409 }
@@ -80,7 +77,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(password);
     const newUser = {
       id: uuidv4(),
-      username,
+      username: trimmedUsername,
       passwordHash,
       createdAt: new Date().toISOString(),
       salutation: salutation || undefined,
@@ -100,7 +97,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error creating user:", error);
+    logAuthError("Admin create user endpoint", error);
     return NextResponse.json(
       { error: "Při vytváření uživatele došlo k chybě" },
       { status: 500 }

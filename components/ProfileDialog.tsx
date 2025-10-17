@@ -2,6 +2,14 @@
 
 import { useState, useRef } from "react";
 import { User, X, Lock, AlertCircle, Loader2, Check, UserCircle } from "lucide-react";
+import {
+  validateUsernameClient,
+  validatePasswordClient,
+  MIN_USERNAME_LENGTH,
+  MAX_USERNAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+} from "@/lib/validation-client";
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -32,13 +40,6 @@ export default function ProfileDialog({
 
   if (!isOpen) return null;
 
-  // Validate username format
-  const validateUsername = (username: string): boolean => {
-    if (!username) return true; // Empty is valid (means no change)
-    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
-    return usernameRegex.test(username);
-  };
-
   // Check if passwords match
   const validatePasswordMatch = (): boolean => {
     if (!newPassword) return true; // No password change is valid
@@ -49,7 +50,8 @@ export default function ProfileDialog({
   // Check if form is valid for submission
   const isFormValid = () => {
     if (!currentPassword) return false;
-    if (newUsername && !validateUsername(newUsername)) return false;
+    if (usernameError) return false;
+    if (passwordError) return false;
     if (newPassword && !validatePasswordMatch()) return false;
     return true;
   };
@@ -151,8 +153,9 @@ export default function ProfileDialog({
 
   const handleUsernameChange = (value: string) => {
     setNewUsername(value);
-    if (value && !validateUsername(value)) {
-      setUsernameError("Uživatelské jméno může obsahovat pouze písmena, čísla, tečku, podtržítko a pomlčku");
+    const validation = validateUsernameClient(value, true); // allowEmpty for profile
+    if (!validation.isValid) {
+      setUsernameError(validation.error || "Neplatné uživatelské jméno");
     } else {
       setUsernameError("");
     }
@@ -160,6 +163,14 @@ export default function ProfileDialog({
 
   const handleNewPasswordChange = (value: string) => {
     setNewPassword(value);
+
+    // Validate password format
+    const validation = validatePasswordClient(value, true); // allowEmpty for profile
+    if (!validation.isValid) {
+      setPasswordError(validation.error || "Neplatné heslo");
+      return;
+    }
+
     // Check if confirm password needs validation
     if (confirmPassword && value !== confirmPassword) {
       setPasswordError("Hesla se neshodují");
@@ -219,6 +230,10 @@ export default function ProfileDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Hidden dummy fields to prevent autofill */}
+          <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+          <input type="password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
+
           <div className="overflow-y-auto px-6 py-6">
             <div className="space-y-4">
               {/* Salutation */}
@@ -271,6 +286,9 @@ export default function ProfileDialog({
                   }`}
                   placeholder="Ponechte prázdné pro nezměněné"
                   disabled={isSubmitting}
+                  minLength={MIN_USERNAME_LENGTH}
+                  maxLength={MAX_USERNAME_LENGTH}
+                  autoComplete="new-username"
                 />
                 {usernameError && (
                   <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
@@ -298,6 +316,7 @@ export default function ProfileDialog({
                   placeholder="Zadejte aktuální heslo"
                   disabled={isSubmitting}
                   required
+                  autoComplete="off"
                 />
               </div>
 
@@ -318,12 +337,10 @@ export default function ProfileDialog({
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Ponechte prázdné pro nezměněné"
                   disabled={isSubmitting}
+                  minLength={MIN_PASSWORD_LENGTH}
+                  maxLength={MAX_PASSWORD_LENGTH}
+                  autoComplete="new-password"
                 />
-                {newPassword && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Minimálně 6 znaků
-                  </p>
-                )}
               </div>
 
               {/* Confirm Password */}
@@ -349,6 +366,7 @@ export default function ProfileDialog({
                     placeholder="Zadejte nové heslo znovu"
                     disabled={isSubmitting}
                     required
+                    autoComplete="new-password"
                   />
                   {passwordError && (
                     <p className="text-xs text-red-600 mt-1 flex items-center gap-1">

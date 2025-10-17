@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
 import { getUserById, updateUser } from "@/lib/azure-users";
+import { validatePassword } from "@/lib/validation";
+import { logAuthError } from "@/lib/auth-errors";
 
 // PUT /api/admin/users/[id]/password - Change user password
 export async function PUT(
@@ -21,17 +23,11 @@ export async function PUT(
     const body = await request.json();
     const { newPassword } = body;
 
-    // Validate input
-    if (!newPassword) {
+    // Validate password using centralized validation
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Nové heslo je povinné" },
-        { status: 400 }
-      );
-    }
-
-    if (newPassword.length < 6) {
-      return NextResponse.json(
-        { error: "Heslo musí mít alespoň 6 znaků" },
+        { error: validation.error },
         { status: 400 }
       );
     }
@@ -54,7 +50,7 @@ export async function PUT(
       message: "Heslo bylo úspěšně změněno",
     });
   } catch (error) {
-    console.error("Error changing password:", error);
+    logAuthError("Admin change password endpoint", error);
     return NextResponse.json(
       { error: "Při změně hesla došlo k chybě" },
       { status: 500 }
