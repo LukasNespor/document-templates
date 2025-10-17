@@ -84,13 +84,28 @@ export function generateDocument(
   // Word may split {{field}} across multiple <w:t> elements, so we need special handling
   const replaceMergeFieldsInXml = (xml: string): string => {
     // Strategy: Find {{field}} patterns even when split across tags
-    // Pattern matches: {{, then anything including tags, then }}
-    const splitFieldRegex = /\{\{([^}]*(?:<[^>]+>[^}]*)*)\}\}/g;
+    // Pattern matches: {{, then anything (including tags) until }}, using negative lookahead to prevent ReDoS
+    // This avoids nested quantifiers that could cause exponential backtracking
+    const splitFieldRegex = /\{\{((?:(?!\}\})[\s\S])*?)\}\}/g;
 
     let result = xml.replace(splitFieldRegex, (match, content) => {
-      // Extract just the text content, removing any XML tags
-      const textContent = content.replace(/<[^>]+>/g, "").trim();
-      const lowerFieldName = textContent.toLowerCase();
+      // Extract text content from Word XML <w:t> tags specifically
+      // This is more secure than generic tag removal as it only extracts from known Word XML text elements
+      const textParts: string[] = [];
+      const textTagRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+      let tagMatch;
+
+      while ((tagMatch = textTagRegex.exec(content)) !== null) {
+        textParts.push(tagMatch[1]);
+      }
+
+      // If no <w:t> tags found, content might already be plain text
+      const textContent = textParts.length > 0 ? textParts.join("") : content;
+
+      // Sanitize field name: only allow alphanumeric, spaces, dots, hyphens, underscores
+      // This prevents any potential injection while allowing common field name patterns
+      const sanitizedFieldName = textContent.replace(/[^a-zA-Z0-9\s.\-_]/g, "").trim();
+      const lowerFieldName = sanitizedFieldName.toLowerCase();
 
       // Look up the value (case-insensitive)
       const value = data[lowerFieldName];
