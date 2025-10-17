@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { AUTH_ERRORS, logAuthError } from "@/lib/auth-errors";
 
 export async function GET() {
   try {
@@ -17,9 +18,9 @@ export async function GET() {
       user: null,
     });
   } catch (error) {
-    console.error("Session check error:", error);
+    logAuthError("Session check endpoint", error);
     return NextResponse.json(
-      { error: "Při kontrole relace došlo k chybě" },
+      { error: AUTH_ERRORS.SESSION_ERROR },
       { status: 500 }
     );
   }

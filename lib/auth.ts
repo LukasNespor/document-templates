@@ -2,19 +2,12 @@ import bcrypt from "bcrypt";
 import { getIronSession, IronSession } from "iron-session";
 import { SessionData } from "@/types";
 import { cookies } from "next/headers";
+import { sessionOptions } from "./session-config";
 
 const SALT_ROUNDS = 10;
 
-// Session configuration
-export const sessionOptions = {
-  password: process.env.SESSION_SECRET || "complex_password_at_least_32_characters_long_change_this",
-  cookieName: "word_templates_session",
-  cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  },
-};
+// Re-export session options for backward compatibility
+export { sessionOptions };
 
 /**
  * Hash a plain text password using bcrypt

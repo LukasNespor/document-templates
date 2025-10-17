@@ -2,6 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Users, X, Plus, Trash2, LockKeyhole, AlertCircle, Loader2, UserCheck, Shield, Pencil } from "lucide-react";
+import {
+  validateUsernameClient,
+  validatePasswordClient,
+  MIN_USERNAME_LENGTH,
+  MAX_USERNAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+} from "@/lib/validation-client";
 
 interface User {
   id: string;
@@ -35,16 +43,20 @@ export default function UserManagementDialog({
   const [newSalutation, setNewSalutation] = useState("");
   const [newIsAdmin, setNewIsAdmin] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [newUsernameError, setNewUsernameError] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState("");
 
   // Password form state
   const [newPasswordValue, setNewPasswordValue] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState("");
 
   // Edit user form state
   const [editUsername, setEditUsername] = useState("");
   const [editSalutation, setEditSalutation] = useState("");
   const [editIsAdmin, setEditIsAdmin] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editUsernameError, setEditUsernameError] = useState("");
 
   const mouseDownOnBackdrop = useRef(false);
 
@@ -77,17 +89,60 @@ export default function UserManagementDialog({
     }
   };
 
+  const handleNewUsernameChange = (value: string) => {
+    setNewUsername(value);
+    const validation = validateUsernameClient(value);
+    if (!validation.isValid) {
+      setNewUsernameError(validation.error || "Neplatné uživatelské jméno");
+    } else {
+      setNewUsernameError("");
+    }
+  };
+
+  const handleNewPasswordChange = (value: string) => {
+    setNewPassword(value);
+    const validation = validatePasswordClient(value);
+    if (!validation.isValid) {
+      setNewPasswordError(validation.error || "Neplatné heslo");
+    } else {
+      setNewPasswordError("");
+    }
+  };
+
+  const handleEditUsernameChange = (value: string) => {
+    setEditUsername(value);
+    const validation = validateUsernameClient(value);
+    if (!validation.isValid) {
+      setEditUsernameError(validation.error || "Neplatné uživatelské jméno");
+    } else {
+      setEditUsernameError("");
+    }
+  };
+
+  const handleChangePasswordValueChange = (value: string) => {
+    setNewPasswordValue(value);
+    const validation = validatePasswordClient(value);
+    if (!validation.isValid) {
+      setChangePasswordError(validation.error || "Neplatné heslo");
+    } else {
+      setChangePasswordError("");
+    }
+  };
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!newUsername || !newPassword) {
-      setError("Uživatelské jméno a heslo jsou povinné");
+    // Validate before submission
+    const usernameValidation = validateUsernameClient(newUsername);
+    if (!usernameValidation.isValid) {
+      setError(usernameValidation.error || "Neplatné uživatelské jméno");
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("Heslo musí mít alespoň 6 znaků");
+    const passwordValidation = validatePasswordClient(newPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error || "Neplatné heslo");
       return;
     }
 
@@ -114,6 +169,8 @@ export default function UserManagementDialog({
       setNewPassword("");
       setNewSalutation("");
       setNewIsAdmin(false);
+      setNewUsernameError("");
+      setNewPasswordError("");
       setShowAddForm(false);
       await loadUsers();
     } catch (err) {
@@ -154,13 +211,10 @@ export default function UserManagementDialog({
     e.preventDefault();
     setError("");
 
-    if (!newPasswordValue) {
-      setError("Heslo je povinné");
-      return;
-    }
-
-    if (newPasswordValue.length < 6) {
-      setError("Heslo musí mít alespoň 6 znaků");
+    // Validate before submission
+    const validation = validatePasswordClient(newPasswordValue);
+    if (!validation.isValid) {
+      setError(validation.error || "Neplatné heslo");
       return;
     }
 
@@ -178,6 +232,7 @@ export default function UserManagementDialog({
       }
 
       setNewPasswordValue("");
+      setChangePasswordError("");
       setShowPasswordForm(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chyba při změně hesla");
@@ -193,14 +248,17 @@ export default function UserManagementDialog({
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditUsernameError("");
     } else {
       // Close password form if open
       setShowPasswordForm(null);
       setNewPasswordValue("");
+      setChangePasswordError("");
       // Open edit form
       setEditUsername(user.username);
       setEditSalutation(user.salutation || "");
       setEditIsAdmin(user.isAdmin || false);
+      setEditUsernameError(""); // Reset error when opening edit form
       setShowEditForm(user.id);
     }
   };
@@ -209,8 +267,10 @@ export default function UserManagementDialog({
     e.preventDefault();
     setError("");
 
-    if (!editUsername) {
-      setError("Uživatelské jméno je povinné");
+    // Validate before submission
+    const validation = validateUsernameClient(editUsername);
+    if (!validation.isValid) {
+      setError(validation.error || "Neplatné uživatelské jméno");
       return;
     }
 
@@ -234,6 +294,7 @@ export default function UserManagementDialog({
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditUsernameError("");
       setShowEditForm(null);
       await loadUsers();
     } catch (err) {
@@ -252,10 +313,14 @@ export default function UserManagementDialog({
       setNewPassword("");
       setNewSalutation("");
       setNewIsAdmin(false);
+      setNewUsernameError("");
+      setNewPasswordError("");
       setNewPasswordValue("");
+      setChangePasswordError("");
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditUsernameError("");
       setError("");
       onClose();
     }
@@ -315,6 +380,10 @@ export default function UserManagementDialog({
             {/* Add User Form */}
             {showAddForm && (
               <form onSubmit={handleAddUser} className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                {/* Hidden dummy fields to prevent autofill */}
+                <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+                <input type="password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
+
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Přidat nového uživatele</h3>
                 <div className="space-y-3">
                   <div>
@@ -324,27 +393,52 @@ export default function UserManagementDialog({
                     <input
                       type="text"
                       value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => handleNewUsernameChange(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                        newUsernameError
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
                       placeholder="např. novak"
                       disabled={isAdding}
                       required
+                      minLength={MIN_USERNAME_LENGTH}
+                      maxLength={MAX_USERNAME_LENGTH}
+                      autoComplete="new-username"
                     />
+                    {newUsernameError && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {newUsernameError}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                      Heslo * (min. 6 znaků)
+                      Heslo *
                     </label>
                     <input
                       type="password"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => handleNewPasswordChange(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                        newPasswordError
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
                       placeholder="********"
                       disabled={isAdding}
                       required
-                      minLength={6}
+                      minLength={MIN_PASSWORD_LENGTH}
+                      maxLength={MAX_PASSWORD_LENGTH}
+                      autoComplete="new-password"
                     />
+                    {newPasswordError && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {newPasswordError}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">
@@ -383,6 +477,8 @@ export default function UserManagementDialog({
                       setNewPassword("");
                       setNewSalutation("");
                       setNewIsAdmin(false);
+                      setNewUsernameError("");
+                      setNewPasswordError("");
                     }}
                     disabled={isAdding}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
@@ -391,7 +487,7 @@ export default function UserManagementDialog({
                   </button>
                   <button
                     type="submit"
-                    disabled={isAdding || !newUsername || !newPassword}
+                    disabled={isAdding || !newUsername || !newPassword || !!newUsernameError || !!newPasswordError}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {isAdding ? (
@@ -472,6 +568,7 @@ export default function UserManagementDialog({
                                     setEditUsername("");
                                     setEditSalutation("");
                                     setEditIsAdmin(false);
+                                    setEditUsernameError("");
                                     // Open password form
                                     setShowPasswordForm(user.id);
                                   }
@@ -500,6 +597,9 @@ export default function UserManagementDialog({
                     {/* Edit User Form - Inline */}
                     {showEditForm === user.id && (
                       <form onSubmit={handleEditSubmit} className="bg-blue-50 border border-blue-200 rounded-b-lg p-4 mb-2">
+                        {/* Hidden dummy fields to prevent autofill */}
+                        <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
                         <div className="space-y-3">
                           <div>
                             <label className="text-sm font-semibold text-gray-700 mb-1 block">
@@ -508,12 +608,25 @@ export default function UserManagementDialog({
                             <input
                               type="text"
                               value={editUsername}
-                              onChange={(e) => setEditUsername(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              onChange={(e) => handleEditUsernameChange(e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                                editUsernameError
+                                  ? "border-red-500 focus:ring-red-500"
+                                  : "border-gray-300 focus:ring-blue-500"
+                              }`}
                               placeholder="např. novak"
                               disabled={isEditing}
                               required
+                              minLength={MIN_USERNAME_LENGTH}
+                              maxLength={MAX_USERNAME_LENGTH}
+                              autoComplete="new-username"
                             />
+                            {editUsernameError && (
+                              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {editUsernameError}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="text-sm font-semibold text-gray-700 mb-1 block">
@@ -551,6 +664,7 @@ export default function UserManagementDialog({
                               setEditUsername("");
                               setEditSalutation("");
                               setEditIsAdmin(false);
+                              setEditUsernameError("");
                             }}
                             disabled={isEditing}
                             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
@@ -559,7 +673,7 @@ export default function UserManagementDialog({
                           </button>
                           <button
                             type="submit"
-                            disabled={isEditing || !editUsername}
+                            disabled={isEditing || !editUsername || !!editUsernameError}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2"
                           >
                             {isEditing ? (
@@ -581,20 +695,35 @@ export default function UserManagementDialog({
                     {/* Password Change Form - Inline */}
                     {showPasswordForm === user.id && (
                       <form onSubmit={handleChangePassword} className="bg-amber-50 border border-amber-200 rounded-b-lg p-4 mb-2">
+                        {/* Hidden dummy fields to prevent autofill */}
+                        <input type="password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
+
                         <div>
                           <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                            Nové heslo * (min. 6 znaků)
+                            Nové heslo *
                           </label>
                           <input
                             type="password"
                             value={newPasswordValue}
-                            onChange={(e) => setNewPasswordValue(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            onChange={(e) => handleChangePasswordValueChange(e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                              changePasswordError
+                                ? "border-red-500 focus:ring-red-500"
+                                : "border-gray-300 focus:ring-amber-500"
+                            }`}
                             placeholder="********"
                             disabled={isChangingPassword}
                             required
-                            minLength={6}
+                            minLength={MIN_PASSWORD_LENGTH}
+                            maxLength={MAX_PASSWORD_LENGTH}
+                            autoComplete="new-password"
                           />
+                          {changePasswordError && (
+                            <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {changePasswordError}
+                            </p>
+                          )}
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
                           <button
@@ -602,6 +731,7 @@ export default function UserManagementDialog({
                             onClick={() => {
                               setShowPasswordForm(null);
                               setNewPasswordValue("");
+                              setChangePasswordError("");
                             }}
                             disabled={isChangingPassword}
                             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
@@ -610,8 +740,8 @@ export default function UserManagementDialog({
                           </button>
                           <button
                             type="submit"
-                            disabled={isChangingPassword || !newPasswordValue}
-                            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all disabled-all disabled:opacity-50 flex items-center gap-2"
+                            disabled={isChangingPassword || !newPasswordValue || !!changePasswordError}
+                            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all disabled:opacity-50 flex items-center gap-2"
                           >
                             {isChangingPassword ? (
                               <>

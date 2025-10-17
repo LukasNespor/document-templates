@@ -1,36 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByUsername } from "@/lib/azure-users";
 import { verifyPassword, getSession } from "@/lib/auth";
+import { validateCredentials } from "@/lib/validation";
+import {
+  AUTH_ERRORS,
+  AuthErrorType,
+  createAuthErrorResponse,
+  logAuthError,
+  logAuthAttempt,
+} from "@/lib/auth-errors";
 
 export async function POST(request: NextRequest) {
+  let username = "";
+
   try {
     const body = await request.json();
-    const { username, password } = body;
+    username = body.username || "";
+    const password = body.password || "";
 
-    // Validate input
-    if (!username || !password) {
+    // Validate input format
+    const validation = validateCredentials(username, password);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Uživatelské jméno a heslo jsou povinné" },
+        { error: validation.error || AUTH_ERRORS.INVALID_CREDENTIALS },
         { status: 400 }
       );
     }
 
     // Find user by username
-    const user = await getUserByUsername(username);
+    const user = await getUserByUsername(username.trim());
     if (!user) {
-      return NextResponse.json(
-        { error: "Neplatné uživatelské jméno nebo heslo" },
-        { status: 401 }
+      const errorMessage = createAuthErrorResponse(
+        AuthErrorType.USER_NOT_FOUND,
+        username
       );
+      return NextResponse.json({ error: errorMessage }, { status: 401 });
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Neplatné uživatelské jméno nebo heslo" },
-        { status: 401 }
+      const errorMessage = createAuthErrorResponse(
+        AuthErrorType.INVALID_PASSWORD,
+        username
       );
+      return NextResponse.json({ error: errorMessage }, { status: 401 });
     }
 
     // Create session
@@ -42,6 +56,9 @@ export async function POST(request: NextRequest) {
     session.isLoggedIn = true;
     await session.save();
 
+    // Log successful authentication
+    logAuthAttempt(username, true);
+
     return NextResponse.json({
       success: true,
       user: {
@@ -52,9 +69,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logAuthError("Login endpoint", error, { username });
     return NextResponse.json(
-      { error: "Při přihlašování došlo k chybě" },
+      { error: AUTH_ERRORS.LOGIN_ERROR },
       { status: 500 }
     );
   }

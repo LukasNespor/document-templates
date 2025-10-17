@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { hasAnyUser, saveUser } from "@/lib/azure-users";
 import { hashPassword } from "@/lib/auth";
+import { validateCredentials } from "@/lib/validation";
+import { AUTH_ERRORS, logAuthError } from "@/lib/auth-errors";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request) {
@@ -18,7 +20,7 @@ export async function POST(request: Request) {
 
     if (hasUser) {
       return NextResponse.json(
-        { error: "Setup has already been completed" },
+        { error: AUTH_ERRORS.SETUP_ALREADY_COMPLETED },
         { status: 403 }
       );
     }
@@ -27,24 +29,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { username, password } = body;
 
-    // Validate input
-    if (!username || !password) {
+    // Validate input using centralized validation
+    const validation = validateCredentials(username, password);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Username and password are required" },
-        { status: 400 }
-      );
-    }
-
-    if (username.length < 3) {
-      return NextResponse.json(
-        { error: "Username must be at least 3 characters long" },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters long" },
+        { error: validation.error },
         { status: 400 }
       );
     }
@@ -53,7 +42,7 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(password);
     const user = {
       id: uuidv4(),
-      username,
+      username: username.trim(),
       passwordHash,
       createdAt: new Date().toISOString(),
       isAdmin: true, // First user is always admin
@@ -63,9 +52,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error during initial setup:", error);
+    logAuthError("Setup initialization endpoint", error);
     return NextResponse.json(
-      { error: "Failed to complete setup" },
+      { error: AUTH_ERRORS.SETUP_FAILED },
       { status: 500 }
     );
   }

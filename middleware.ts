@@ -2,17 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getIronSession } from "iron-session";
 import { SessionData } from "@/types";
-
-// Session configuration for middleware
-const sessionOptions = {
-  password: process.env.SESSION_SECRET || "complex_password_at_least_32_characters_long_change_this",
-  cookieName: "word_templates_session",
-  cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  },
-};
+import { sessionOptions } from "@/lib/session-config";
+import { AUTH_ERRORS } from "@/lib/auth-errors";
 
 // Paths that don't require authentication
 const publicPaths = ["/login", "/setup", "/api/auth/login"];
@@ -63,7 +54,7 @@ export async function middleware(request: NextRequest) {
       // For API routes, return 401
       if (pathname.startsWith("/api/")) {
         return NextResponse.json(
-          { error: "Neautorizováno" },
+          { error: AUTH_ERRORS.UNAUTHORIZED },
           { status: 401 }
         );
       }
@@ -87,20 +78,26 @@ export async function middleware(request: NextRequest) {
     // On error, check if setup is needed before redirecting
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
-        { error: "Neautorizováno" },
+        { error: AUTH_ERRORS.UNAUTHORIZED },
         { status: 401 }
       );
     }
 
-    // Check if setup is needed
-    const setupNeeded = await isSetupNeeded(request);
-    if (setupNeeded) {
-      const setupUrl = new URL("/setup", request.url);
-      return NextResponse.redirect(setupUrl);
-    }
+    try {
+      // Check if setup is needed
+      const setupNeeded = await isSetupNeeded(request);
+      if (setupNeeded) {
+        const setupUrl = new URL("/setup", request.url);
+        return NextResponse.redirect(setupUrl);
+      }
 
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+      const loginUrl = new URL("/login", request.url);
+      return NextResponse.redirect(loginUrl);
+    } catch (setupCheckError) {
+      // If setup check fails, redirect to login as fallback
+      const loginUrl = new URL("/login", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 }
 

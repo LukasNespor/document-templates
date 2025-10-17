@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteUser, getUserById, updateUser, getAllUsers } from "@/lib/azure-users";
+import { validateUsername } from "@/lib/validation";
+import { logAuthError } from "@/lib/auth-errors";
 
 // PUT /api/admin/users/[id] - Update user details
 export async function PUT(
@@ -21,10 +23,11 @@ export async function PUT(
     const body = await request.json();
     const { username, salutation, isAdmin } = body;
 
-    // Validate input
-    if (!username) {
+    // Validate username using centralized validation
+    const validation = validateUsername(username);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Uživatelské jméno je povinné" },
+        { error: validation.error },
         { status: 400 }
       );
     }
@@ -40,8 +43,9 @@ export async function PUT(
 
     // Check if username is already taken by another user
     const allUsers = await getAllUsers();
+    const trimmedUsername = username.trim();
     const usernameExists = allUsers.some(
-      u => u.username === username && u.id !== id
+      u => u.username === trimmedUsername && u.id !== id
     );
     if (usernameExists) {
       return NextResponse.json(
@@ -60,7 +64,7 @@ export async function PUT(
 
     // Update user
     const updatedUser = await updateUser(id, {
-      username,
+      username: trimmedUsername,
       salutation: salutation || undefined,
       isAdmin: isAdmin || false,
     });
@@ -76,7 +80,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("Error updating user:", error);
+    logAuthError("Admin update user endpoint", error);
     return NextResponse.json(
       { error: "Při aktualizaci uživatele došlo k chybě" },
       { status: 500 }
@@ -125,7 +129,7 @@ export async function DELETE(
       message: "Uživatel byl úspěšně smazán",
     });
   } catch (error) {
-    console.error("Error deleting user:", error);
+    logAuthError("Admin delete user endpoint", error);
     return NextResponse.json(
       { error: "Při mazání uživatele došlo k chybě" },
       { status: 500 }

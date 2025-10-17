@@ -74,10 +74,29 @@ The application's core functionality is built around key modules in the `lib/` d
   - `getSession()`: Gets current session using iron-session
   - `isAuthenticated()`: Checks if user is logged in
   - `getCurrentUser()`: Gets current user from session
+- **session-config.ts**: Centralized session configuration
+  - `sessionOptions`: Unified session configuration for iron-session used across the application
+  - Validates SESSION_SECRET in production (fails fast if missing)
+  - Warns if SESSION_SECRET is less than 32 characters
+  - Configures secure cookies with httpOnly, sameSite, and 7-day expiration
+- **validation.ts**: Centralized input validation
+  - `validateUsername()`: Validates username format and length (3-50 characters, alphanumeric with spaces, dots, hyphens, underscores)
+  - `validatePassword()`: Validates password format and length (6-72 characters)
+  - `validateCredentials()`: Validates both username and password
+  - Provides consistent validation rules across login, setup, and user management
+- **auth-errors.ts**: Centralized error handling and secure logging
+  - `AUTH_ERRORS`: Standard error messages in Czech (prevents user enumeration)
+  - `logAuthError()`: Safely logs errors without exposing sensitive information
+  - `logAuthAttempt()`: Logs authentication attempts for security monitoring
+  - `createAuthErrorResponse()`: Creates safe error responses for authentication failures
 - **azure-users.ts**: User management in Azure Table Storage
   - `saveUser()`: Saves user to DocumentTemplateUsers table
   - `getUserByUsername()`: Retrieves user by username
   - `getUserById()`: Retrieves user by ID
+  - `updateUser()`: Updates user information
+  - `getAllUsers()`: Retrieves all users
+  - `deleteUser()`: Deletes a user
+  - `hasAnyUser()`: Checks if any user exists (for initial setup)
 - **azure-blob.ts**: Manages Blob Storage operations (upload/download .docx files)
 - **azure-table.ts**: Manages Table Storage operations (save/retrieve template metadata)
 - **docx-processor.ts**: Handles Word document processing using pizzip
@@ -154,7 +173,46 @@ All shared types are defined in `types/index.ts`:
 
 ### Authentication & Security
 
-- **Password Hashing**: Uses bcrypt with 10 salt rounds. Passwords are hashed one-way and cannot be reversed.
-- **Session Management**: Uses iron-session with encrypted cookies. Sessions expire after 7 days.
-- **Protected Routes**: Middleware intercepts all requests and checks for valid session before allowing access.
-- **No Admin UI**: User management is done via CLI script (`scripts/create-user.ts`) or direct Azure Table Storage access.
+The application implements multiple layers of security best practices:
+
+#### Password Security
+- **Hashing Algorithm**: Uses bcrypt with 10 salt rounds for one-way password hashing
+- **Password Requirements**: Minimum 6 characters, maximum 72 characters (bcrypt limitation)
+- **Secure Storage**: Passwords are never stored in plain text and cannot be recovered
+- **Validation**: Centralized validation prevents weak passwords and ensures consistent rules
+
+#### Session Management
+- **Session Library**: Uses iron-session for encrypted, signed session cookies
+- **Session Duration**: 7 days with automatic expiration
+- **Cookie Security**:
+  - `httpOnly: true` - Prevents JavaScript access to cookies
+  - `secure: true` (production) - Ensures cookies only sent over HTTPS
+  - `sameSite: "lax"` - Protects against CSRF attacks
+- **Session Secret**:
+  - Required in production (application fails fast if missing)
+  - Minimum 32 characters recommended
+  - Centralized configuration prevents duplication
+- **Session Configuration**: Unified session options in `lib/session-config.ts` used consistently across `lib/auth.ts` and `middleware.ts`
+
+#### Input Validation
+- **Centralized Validation**: All authentication inputs validated through `lib/validation.ts`
+- **Username Requirements**: 3-50 characters, alphanumeric with spaces, dots, hyphens, underscores
+- **Consistent Rules**: Same validation applied in login, setup, and user creation scripts
+- **Trimming**: Usernames automatically trimmed to prevent whitespace issues
+
+#### Error Handling & Logging
+- **Generic Error Messages**: Returns same error message for invalid username or password to prevent user enumeration
+- **Secure Logging**: Logs authentication errors without exposing sensitive information
+- **Audit Trail**: All authentication attempts logged with timestamp, username, and outcome
+- **Centralized Error Management**: All error messages defined in `lib/auth-errors.ts`
+
+#### Route Protection
+- **Middleware Protection**: All routes protected except `/login`, `/setup`, and `/api/auth/login`
+- **Session Validation**: Every request checks for valid session before granting access
+- **API Security**: Unauthenticated API requests return 401 Unauthorized
+- **Page Security**: Unauthenticated page requests redirect to login or setup
+
+#### User Management
+- **No Admin UI**: User management intentionally done via CLI script (`scripts/create-user.ts`) or direct Azure Table Storage access
+- **First User Setup**: Initial user created through `/setup` page with automatic admin privileges
+- **Role-Based Access**: Support for admin flag (stored in session and Azure Table Storage)
