@@ -145,22 +145,69 @@ docker exec -it document-templates npx tsx scripts/create-user.ts <username> <pa
 
 ## Authentication & Security
 
-### How Authentication Works
+The application implements multiple layers of security best practices to protect user accounts and session data.
 
-- **Secure Password Storage**: Passwords are hashed using bcrypt with 10 salt rounds. The hash is a one-way encryption that cannot be reversed to retrieve the original password.
-- **Session Management**: User sessions are secured using iron-session with encrypted cookies.
-- **Protected Routes**: All application routes require authentication. Unauthenticated users are redirected to the login page.
-- **User Storage**: User accounts are stored in Azure Table Storage in a dedicated `DocumentTemplateUsers` table.
+### Password Security
+
+- **Hashing Algorithm**: Passwords are hashed using bcrypt with 10 salt rounds, providing one-way encryption that cannot be reversed
+- **Password Requirements**:
+  - Minimum 6 characters
+  - Maximum 72 characters (bcrypt limitation)
+- **Input Validation**: All authentication inputs are validated using centralized validation rules
+- **Secure Storage**: Passwords are never stored in plain text and cannot be recovered
+
+### Session Management
+
+- **Session Library**: Uses iron-session for encrypted, signed session cookies
+- **Session Duration**: 7 days with automatic expiration
+- **Cookie Security**:
+  - `httpOnly: true` - Prevents JavaScript access to cookies (XSS protection)
+  - `secure: true` - Cookies only sent over HTTPS in production
+  - `sameSite: "lax"` - Protects against CSRF attacks
+- **Session Secret**: Required environment variable (`SESSION_SECRET`) must be at least 32 characters. The application will fail to start in production if this is missing or improperly configured.
+
+### Input Validation
+
+- **Username Requirements**: 3-50 characters, alphanumeric with spaces, dots, hyphens, and underscores
+- **Automatic Trimming**: Usernames are automatically trimmed to prevent whitespace issues
+- **Consistent Validation**: All authentication endpoints use the same centralized validation logic
+
+### Security Features
+
+- **User Enumeration Prevention**: Login errors return generic messages to prevent attackers from discovering valid usernames
+- **Secure Logging**: Authentication errors and attempts are logged without exposing sensitive information
+- **Audit Trail**: All authentication attempts are logged with timestamps for security monitoring
+- **Protected Routes**: All application routes require authentication. Unauthenticated users are redirected to the login page, and API requests return 401 Unauthorized.
+- **First-Time Setup**: Initial user is created through a dedicated `/setup` page with automatic admin privileges
+
+### User Storage
+
+User accounts are stored in Azure Table Storage in the `DocumentTemplateUsers` table with the following information:
+- User ID (UUID)
+- Username
+- Password hash (bcrypt)
+- Creation timestamp
+- Optional salutation
+- Admin flag (for role-based access)
 
 ### Managing Users
 
-To create additional users, use the create-user script:
+To create additional users, use the create-user script with centralized validation:
 
 ```bash
-npx tsx scripts/create-user.ts <username> <password>
+npx tsx scripts/create-user.ts <username> <password> [--admin]
 ```
 
-Note: There is no admin UI for user management yet. You'll need to use this script or directly access Azure Table Storage to manage users.
+Examples:
+```bash
+# Create a regular user
+npx tsx scripts/create-user.ts john SecurePass123
+
+# Create an admin user
+npx tsx scripts/create-user.ts admin AdminPass456 --admin
+```
+
+Note: There is no admin UI for user management. You'll need to use this script or directly access Azure Table Storage to manage users.
 
 ## Usage
 
@@ -213,6 +260,9 @@ document-templates/
 │   └── TemplateForm.tsx        # Field value form
 ├── lib/
 │   ├── auth.ts                 # Authentication utilities (bcrypt, sessions)
+│   ├── auth-errors.ts          # Centralized error handling and secure logging
+│   ├── session-config.ts       # Centralized session configuration
+│   ├── validation.ts           # Centralized input validation
 │   ├── azure-blob.ts           # Blob Storage utilities
 │   ├── azure-table.ts          # Table Storage utilities
 │   ├── azure-users.ts          # User management in Table Storage
