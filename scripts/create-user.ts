@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 import { saveUser } from "../lib/azure-users";
 import { hashPassword } from "../lib/auth";
+import { validateCredentials } from "../lib/validation";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -42,7 +43,7 @@ async function createUser(username: string, password: string, isAdmin: boolean =
 
     const user = {
       id: uuidv4(),
-      username,
+      username: username.trim(),
       passwordHash,
       createdAt: new Date().toISOString(),
       isAdmin,
@@ -75,13 +76,10 @@ if (args.length < 2 || args.length > 3) {
 
 const [username, password, adminFlag] = args;
 
-if (!username || !password) {
-  console.error("Both username and password are required");
-  process.exit(1);
-}
-
-if (password.length < 6) {
-  console.error("Password must be at least 6 characters long");
+// Validate credentials using centralized validation
+const validation = validateCredentials(username, password);
+if (!validation.isValid) {
+  console.error(`Error: ${validation.error}`);
   process.exit(1);
 }
 
