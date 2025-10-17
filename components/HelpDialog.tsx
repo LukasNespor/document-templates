@@ -112,7 +112,8 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
             </h4>
             <p className="text-gray-600 mb-4">
               U každé šablony můžete upravit název, poznámku a skupinu (tlačítko Upravit),
-              znovu nahrát soubor šablony (tlačítko Znovu nahrát), nebo šablonu smazat (tlačítko Smazat).
+              znovu nahrát soubor šablony (tlačítko Znovu nahrát), stáhnout původní Word šablonu (.docx),
+              nebo šablonu smazat (tlačítko Smazat).
             </p>
 
                   <h4 className="font-semibold text-gray-800 mb-2">Tipy</h4>
