@@ -38,13 +38,13 @@ The application will not function without valid Azure Storage credentials and se
 
 ### Creating Users
 
-Users can be created using the provided script:
+The first user is created through the `/setup` page when accessing the application for the first time. This initial user automatically receives admin privileges.
 
-```bash
-npx tsx scripts/create-user.ts <username> <password>
-```
-
-Example: `npx tsx scripts/create-user.ts admin MySecurePassword123`
+After the initial setup, admin users can manage other users through the web interface:
+- Access the user management dialog via the "Manage Users" button in the top bar
+- Create, edit, delete users
+- Change user passwords
+- Assign admin privileges
 
 Passwords are hashed using bcrypt (one-way encryption) and cannot be recovered.
 
@@ -111,6 +111,18 @@ Authentication routes in `app/api/auth/`:
 - `POST /api/auth/logout` - Logout (destroys session)
 - `GET /api/auth/session` - Check current session status
 
+Setup routes in `app/api/setup/`:
+
+- `POST /api/setup/initialize` - Create first admin user (only works if no users exist)
+
+Admin routes in `app/api/admin/` (all require admin privileges):
+
+- `GET /api/admin/users` - List all users
+- `POST /api/admin/users` - Create new user
+- `PATCH /api/admin/users/[id]` - Update user information
+- `DELETE /api/admin/users/[id]` - Delete user
+- `POST /api/admin/users/[id]/password` - Change user password
+
 Template routes in `app/api/templates/` (all require authentication):
 
 - `GET /api/templates` - List all templates (fetches from Azure Table Storage)
@@ -120,17 +132,20 @@ Template routes in `app/api/templates/` (all require authentication):
 
 ### Authentication Middleware
 
-The application uses Next.js middleware (`middleware.ts`) to protect all routes except `/login` and `/api/auth/login`. Unauthenticated users are redirected to the login page. API routes return 401 Unauthorized if accessed without a valid session.
+The application uses Next.js middleware (`middleware.ts`) to protect all routes except `/login`, `/setup`, `/api/auth/login`, and `/api/setup/initialize`. Unauthenticated users are redirected to the login page (or setup page if no users exist). API routes return 401 Unauthorized if accessed without a valid session. Admin routes additionally check for admin privileges and return 403 Forbidden if the user is not an admin.
 
 ### Component Structure
 
 - **app/page.tsx**: Main page (protected) orchestrates the entire application state, template selection, and user session
 - **app/login/page.tsx**: Login page with username/password form
-- **TopBar.tsx**: Navigation bar with upload, help, username display, and logout buttons
+- **app/setup/page.tsx**: Initial setup page for creating the first admin user
+- **TopBar.tsx**: Navigation bar with upload, help, user management (admin only), profile, and logout buttons
 - **Sidebar.tsx**: Collapsible sidebar displaying templates grouped by category
 - **UploadTemplateDialog.tsx**: Modal for uploading new templates
 - **TemplateForm.tsx**: Dynamic form for filling merge field values
 - **HelpDialog.tsx**: Help documentation modal
+- **UserManagementDialog.tsx**: Admin-only modal for managing users (create, edit, delete, change passwords)
+- **ProfileDialog.tsx**: User profile modal for viewing and editing own information
 
 ### TypeScript Types
 
@@ -197,7 +212,7 @@ The application implements multiple layers of security best practices:
 #### Input Validation
 - **Centralized Validation**: All authentication inputs validated through `lib/validation.ts`
 - **Username Requirements**: 3-50 characters, alphanumeric with spaces, dots, hyphens, underscores
-- **Consistent Rules**: Same validation applied in login, setup, and user creation scripts
+- **Consistent Rules**: Same validation applied in login, setup, and user management
 - **Trimming**: Usernames automatically trimmed to prevent whitespace issues
 
 #### Error Handling & Logging
@@ -213,6 +228,8 @@ The application implements multiple layers of security best practices:
 - **Page Security**: Unauthenticated page requests redirect to login or setup
 
 #### User Management
-- **No Admin UI**: User management intentionally done via CLI script (`scripts/create-user.ts`) or direct Azure Table Storage access
+- **Web-Based Admin UI**: Full user management interface available to admin users through the "Manage Users" button
 - **First User Setup**: Initial user created through `/setup` page with automatic admin privileges
-- **Role-Based Access**: Support for admin flag (stored in session and Azure Table Storage)
+- **Role-Based Access**: Admin flag controls access to user management features (stored in session and Azure Table Storage)
+- **Admin Features**: Create/edit/delete users, change passwords, assign admin privileges
+- **User Profile**: All users can view and edit their own profile information (username, salutation)

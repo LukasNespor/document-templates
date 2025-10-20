@@ -66,16 +66,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### 4. Create Your First User
 
-Since there's no admin UI yet, use the provided script to create a user:
-
-```bash
-npx tsx scripts/create-user.ts <username> <password>
-```
-
-Example:
-```bash
-npx tsx scripts/create-user.ts admin MySecurePassword123
-```
+When you first run the application, you'll be redirected to the setup page where you can create the initial admin user through the web interface. This first user will automatically have admin privileges and can manage other users later.
 
 **Important**: Passwords are hashed using bcrypt and cannot be recovered. The hash is one-way encryption, so make sure to remember your password.
 
@@ -87,7 +78,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-The application will redirect you to the login page. Use the credentials you created in step 4.
+If this is your first time running the application, you'll be redirected to the setup page to create your first admin user. Otherwise, you'll be redirected to the login page.
 
 ## Running with Docker
 
@@ -133,15 +124,7 @@ docker run -d \
 
 ### Creating Users in Docker
 
-To create a user when running in Docker:
-
-```bash
-# If using docker-compose
-docker-compose exec document-templates npx tsx scripts/create-user.ts <username> <password>
-
-# If using docker run
-docker exec -it document-templates npx tsx scripts/create-user.ts <username> <password>
-```
+When you first access the application in Docker, you'll be redirected to the setup page where you can create the initial admin user through the web interface. After that, admin users can manage other users through the "Manage Users" button in the application.
 
 ## Authentication & Security
 
@@ -192,22 +175,16 @@ User accounts are stored in Azure Table Storage in the `DocumentTemplateUsers` t
 
 ### Managing Users
 
-To create additional users, use the create-user script with centralized validation:
+Admin users can manage other users directly through the web interface:
 
-```bash
-npx tsx scripts/create-user.ts <username> <password> [--admin]
-```
-
-Examples:
-```bash
-# Create a regular user
-npx tsx scripts/create-user.ts john SecurePass123
-
-# Create an admin user
-npx tsx scripts/create-user.ts admin AdminPass456 --admin
-```
-
-Note: There is no admin UI for user management. You'll need to use this script or directly access Azure Table Storage to manage users.
+1. Log in as an admin user
+2. Click the "Manage Users" button in the top bar
+3. From the user management dialog, you can:
+   - View all users
+   - Create new users (regular or admin)
+   - Edit existing users (username, salutation, admin status)
+   - Change user passwords
+   - Delete users
 
 ## Usage
 
