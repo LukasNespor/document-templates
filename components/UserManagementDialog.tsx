@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Users, X, Plus, Trash2, LockKeyhole, AlertCircle, Loader2, UserCheck, Shield, Pencil } from "lucide-react";
+import { Users, X, Plus, Trash2, LockKeyhole, AlertCircle, Loader2, UserCheck, Shield, Pencil, FileSpreadsheet } from "lucide-react";
 import {
   validateUsernameClient,
   validatePasswordClient,
@@ -17,6 +17,7 @@ interface User {
   createdAt: string;
   salutation?: string;
   isAdmin?: boolean;
+  canBulkGenerate?: boolean;
 }
 
 interface UserManagementDialogProps {
@@ -42,6 +43,7 @@ export default function UserManagementDialog({
   const [newPassword, setNewPassword] = useState("");
   const [newSalutation, setNewSalutation] = useState("");
   const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [newCanBulkGenerate, setNewCanBulkGenerate] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newUsernameError, setNewUsernameError] = useState("");
   const [newPasswordError, setNewPasswordError] = useState("");
@@ -55,6 +57,7 @@ export default function UserManagementDialog({
   const [editUsername, setEditUsername] = useState("");
   const [editSalutation, setEditSalutation] = useState("");
   const [editIsAdmin, setEditIsAdmin] = useState(false);
+  const [editCanBulkGenerate, setEditCanBulkGenerate] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editUsernameError, setEditUsernameError] = useState("");
 
@@ -156,6 +159,7 @@ export default function UserManagementDialog({
           password: newPassword,
           salutation: newSalutation || undefined,
           isAdmin: newIsAdmin,
+          canBulkGenerate: newCanBulkGenerate,
         }),
       });
 
@@ -169,6 +173,7 @@ export default function UserManagementDialog({
       setNewPassword("");
       setNewSalutation("");
       setNewIsAdmin(false);
+      setNewCanBulkGenerate(false);
       setNewUsernameError("");
       setNewPasswordError("");
       setShowAddForm(false);
@@ -248,6 +253,7 @@ export default function UserManagementDialog({
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditCanBulkGenerate(false);
       setEditUsernameError("");
     } else {
       // Close password form if open
@@ -258,6 +264,7 @@ export default function UserManagementDialog({
       setEditUsername(user.username);
       setEditSalutation(user.salutation || "");
       setEditIsAdmin(user.isAdmin || false);
+      setEditCanBulkGenerate(user.canBulkGenerate || false);
       setEditUsernameError(""); // Reset error when opening edit form
       setShowEditForm(user.id);
     }
@@ -267,23 +274,38 @@ export default function UserManagementDialog({
     e.preventDefault();
     setError("");
 
-    // Validate before submission
-    const validation = validateUsernameClient(editUsername);
-    if (!validation.isValid) {
-      setError(validation.error || "Neplatné uživatelské jméno");
-      return;
+    // If editing own profile, only send permissions
+    const isEditingSelf = showEditForm === currentUserId;
+
+    // Validate username only if editing other users
+    if (!isEditingSelf) {
+      const validation = validateUsernameClient(editUsername);
+      if (!validation.isValid) {
+        setError(validation.error || "Neplatné uživatelské jméno");
+        return;
+      }
     }
 
     setIsEditing(true);
     try {
+      const payload = isEditingSelf
+        ? {
+            // When editing self, only send permissions
+            isAdmin: editIsAdmin,
+            canBulkGenerate: editCanBulkGenerate,
+          }
+        : {
+            // When editing others, send all fields
+            username: editUsername,
+            salutation: editSalutation || undefined,
+            isAdmin: editIsAdmin,
+            canBulkGenerate: editCanBulkGenerate,
+          };
+
       const response = await fetch(`/api/admin/users/${showEditForm}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: editUsername,
-          salutation: editSalutation || undefined,
-          isAdmin: editIsAdmin,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -294,6 +316,7 @@ export default function UserManagementDialog({
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditCanBulkGenerate(false);
       setEditUsernameError("");
       setShowEditForm(null);
       await loadUsers();
@@ -313,6 +336,7 @@ export default function UserManagementDialog({
       setNewPassword("");
       setNewSalutation("");
       setNewIsAdmin(false);
+      setNewCanBulkGenerate(false);
       setNewUsernameError("");
       setNewPasswordError("");
       setNewPasswordValue("");
@@ -320,6 +344,7 @@ export default function UserManagementDialog({
       setEditUsername("");
       setEditSalutation("");
       setEditIsAdmin(false);
+      setEditCanBulkGenerate(false);
       setEditUsernameError("");
       setError("");
       onClose();
@@ -467,6 +492,20 @@ export default function UserManagementDialog({
                       Administrátor
                     </label>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="canBulkGenerate"
+                      checked={newCanBulkGenerate}
+                      onChange={(e) => setNewCanBulkGenerate(e.target.checked)}
+                      className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      disabled={isAdding}
+                    />
+                    <label htmlFor="canBulkGenerate" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                      <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                      Hromadné generování z CSV
+                    </label>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <button
@@ -477,6 +516,7 @@ export default function UserManagementDialog({
                       setNewPassword("");
                       setNewSalutation("");
                       setNewIsAdmin(false);
+                      setNewCanBulkGenerate(false);
                       setNewUsernameError("");
                       setNewPasswordError("");
                     }}
@@ -545,17 +585,17 @@ export default function UserManagementDialog({
                           </p>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className={`p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${
+                              showEditForm === user.id ? "bg-blue-100" : ""
+                            }`}
+                            title={user.id === currentUserId ? "Upravit oprávnění" : "Upravit uživatele"}
+                          >
+                            <Pencil className="w-5 h-5" />
+                          </button>
                           {user.id !== currentUserId && (
                             <>
-                              <button
-                                onClick={() => handleEditUser(user)}
-                                className={`p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${
-                                  showEditForm === user.id ? "bg-blue-100" : ""
-                                }`}
-                                title="Upravit uživatele"
-                              >
-                                <Pencil className="w-5 h-5" />
-                              </button>
                               <button
                                 onClick={() => {
                                   if (showPasswordForm === user.id) {
@@ -568,6 +608,7 @@ export default function UserManagementDialog({
                                     setEditUsername("");
                                     setEditSalutation("");
                                     setEditIsAdmin(false);
+                                    setEditCanBulkGenerate(false);
                                     setEditUsernameError("");
                                     // Open password form
                                     setShowPasswordForm(user.id);
@@ -601,46 +642,57 @@ export default function UserManagementDialog({
                         <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
                         <div className="space-y-3">
-                          <div>
-                            <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                              Uživatelské jméno *
-                            </label>
-                            <input
-                              type="text"
-                              value={editUsername}
-                              onChange={(e) => handleEditUsernameChange(e.target.value)}
-                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                                editUsernameError
-                                  ? "border-red-500 focus:ring-red-500"
-                                  : "border-gray-300 focus:ring-blue-500"
-                              }`}
-                              placeholder="např. novak"
-                              disabled={isEditing}
-                              required
-                              minLength={MIN_USERNAME_LENGTH}
-                              maxLength={MAX_USERNAME_LENGTH}
-                              autoComplete="new-username"
-                            />
-                            {editUsernameError && (
-                              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {editUsernameError}
+                          {showEditForm !== currentUserId && (
+                            <>
+                              <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                  Uživatelské jméno *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editUsername}
+                                  onChange={(e) => handleEditUsernameChange(e.target.value)}
+                                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                                    editUsernameError
+                                      ? "border-red-500 focus:ring-red-500"
+                                      : "border-gray-300 focus:ring-blue-500"
+                                  }`}
+                                  placeholder="např. novak"
+                                  disabled={isEditing}
+                                  required
+                                  minLength={MIN_USERNAME_LENGTH}
+                                  maxLength={MAX_USERNAME_LENGTH}
+                                  autoComplete="new-username"
+                                />
+                                {editUsernameError && (
+                                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {editUsernameError}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                  Oslovení
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editSalutation}
+                                  onChange={(e) => setEditSalutation(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="např. Pane/Paní"
+                                  disabled={isEditing}
+                                />
+                              </div>
+                            </>
+                          )}
+                          {showEditForm === currentUserId && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                              <p className="text-sm text-blue-800">
+                                <strong>Poznámka:</strong> Své uživatelské jméno, oslovení a heslo můžete změnit ve svém profilu kliknutím na své jméno v horním menu.
                               </p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                              Oslovení
-                            </label>
-                            <input
-                              type="text"
-                              value={editSalutation}
-                              onChange={(e) => setEditSalutation(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="např. Pane/Paní"
-                              disabled={isEditing}
-                            />
-                          </div>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -648,11 +700,28 @@ export default function UserManagementDialog({
                               checked={editIsAdmin}
                               onChange={(e) => setEditIsAdmin(e.target.checked)}
                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                              disabled={isEditing || showEditForm === currentUserId}
+                              disabled={isEditing || (showEditForm === currentUserId && user.isAdmin)}
                             />
                             <label htmlFor={`editIsAdmin-${user.id}`} className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                               <Shield className="w-4 h-4 text-blue-600" />
                               Administrátor
+                              {showEditForm === currentUserId && user.isAdmin && (
+                                <span className="text-xs text-gray-500">(nemůžete si odebrat)</span>
+                              )}
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`editCanBulkGenerate-${user.id}`}
+                              checked={editCanBulkGenerate}
+                              onChange={(e) => setEditCanBulkGenerate(e.target.checked)}
+                              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                              disabled={isEditing}
+                            />
+                            <label htmlFor={`editCanBulkGenerate-${user.id}`} className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                              <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                              Hromadné generování z CSV
                             </label>
                           </div>
                         </div>
@@ -664,6 +733,7 @@ export default function UserManagementDialog({
                               setEditUsername("");
                               setEditSalutation("");
                               setEditIsAdmin(false);
+                              setEditCanBulkGenerate(false);
                               setEditUsernameError("");
                             }}
                             disabled={isEditing}

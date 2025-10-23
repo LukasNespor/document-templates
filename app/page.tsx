@@ -33,6 +33,7 @@ export default function Home() {
   const [username, setUsername] = useState<string | null>(null);
   const [salutation, setSalutation] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canBulkGenerate, setCanBulkGenerate] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
@@ -67,6 +68,7 @@ export default function Home() {
         setUsername(data.user.username);
         setSalutation(data.user.salutation || null);
         setIsAdmin(data.user.isAdmin || false);
+        setCanBulkGenerate(data.user.canBulkGenerate || false);
         setUserId(data.user.userId || "");
       }
     } catch (error) {
@@ -387,7 +389,7 @@ export default function Home() {
               onDeleteTemplate={handleDeleteTemplate}
               onReuploadTemplate={handleReuploadTemplate}
               onHelp={() => setIsHelpOpen(true)}
-              onBulkGenerate={() => setIsBulkGenerateOpen(true)}
+              onBulkGenerate={canBulkGenerate ? () => setIsBulkGenerateOpen(true) : undefined}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl border border-gray-200 p-8">
@@ -543,7 +545,11 @@ export default function Home() {
       </div>
 
       {/* Dialogs */}
-      <HelpDialog isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <HelpDialog
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+        canBulkGenerate={canBulkGenerate}
+      />
       <UploadTemplateDialog
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
@@ -572,7 +578,11 @@ export default function Home() {
       />
       <UserManagementDialog
         isOpen={isUserManagementOpen}
-        onClose={() => setIsUserManagementOpen(false)}
+        onClose={() => {
+          setIsUserManagementOpen(false);
+          // Reload session in case user edited their own profile
+          checkSession();
+        }}
         currentUserId={userId}
       />
     </div>

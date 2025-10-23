@@ -6,9 +6,10 @@ import { X, ChevronDown, ChevronUp } from "lucide-react";
 interface HelpDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  canBulkGenerate?: boolean;
 }
 
-export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
+export default function HelpDialog({ isOpen, onClose, canBulkGenerate = false }: HelpDialogProps) {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const mouseDownOnBackdrop = useRef(false);
 
@@ -71,7 +72,7 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
               {openSection === "start" && (
                 <div className="p-6 bg-white">
                   <p className="text-gray-600 mb-4">
-                    Tato aplikace vám pomůže vytvářet Word dokumenty ze šablon. Můžete generovat jednotlivé dokumenty nebo hromadně z CSV souboru.
+                    Tato aplikace vám pomůže vytvářet Word dokumenty ze šablon. {canBulkGenerate ? "Můžete generovat jednotlivé dokumenty nebo hromadně z CSV souboru." : ""}
                   </p>
 
             <h4 className="font-semibold text-gray-800 mb-2">
@@ -91,21 +92,25 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
             </p>
 
             <h4 className="font-semibold text-gray-800 mb-2">
-              3a. Generovat jeden dokument
+              {canBulkGenerate ? "3a. Generovat jeden dokument" : "3. Generovat dokument"}
             </h4>
             <p className="text-gray-600 mb-4">
               Vyplňte hodnoty pro každé pole a zadejte název výsledného souboru.
               Klikněte na tlačítko &quot;Vygenerovat dokument&quot; a dokument se stáhne do vašeho počítače.
             </p>
 
-            <h4 className="font-semibold text-gray-800 mb-2">
-              3b. Hromadné generování z CSV
-            </h4>
-            <p className="text-gray-600 mb-4">
-              Pro generování více dokumentů najednou klikněte na zelené tlačítko &quot;Nahrát CSV&quot; v horní části šablony.
-              Nahrajte CSV soubor (oddělený středníky), kde první sloupec obsahuje názvy souborů a další sloupce odpovídají
-              polím v šabloně. Stáhne se ZIP soubor se všemi vygenerovanými dokumenty.
-            </p>
+            {canBulkGenerate && (
+              <>
+                <h4 className="font-semibold text-gray-800 mb-2">
+                  3b. Hromadné generování z CSV
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  Pro generování více dokumentů najednou klikněte na zelené tlačítko &quot;Nahrát CSV&quot; v horní části šablony.
+                  Nahrajte CSV soubor (oddělený středníky), kde první sloupec obsahuje názvy souborů a další sloupce odpovídají
+                  polím v šabloně. Stáhne se ZIP soubor se všemi vygenerovanými dokumenty.
+                </p>
+              </>
+            )}
 
             <h4 className="font-semibold text-gray-800 mb-2">
               4. Správa šablon
@@ -121,7 +126,9 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
                     <div>Používejte popisné názvy pro pole (např. {"{{"} Jméno {"}}"}, {"{{"} Č.J. {"}}"})</div>
                     <div>Seskupujte související šablony do skupin pro lepší přehlednost</div>
                     <div>Přidejte poznámky k šablonám pro zapamatování jejich účelu</div>
-                    <div>Pro hromadné generování připravte CSV soubor s daty v Excelu</div>
+                    {canBulkGenerate && (
+                      <div>Pro hromadné generování připravte CSV soubor s daty v Excelu</div>
+                    )}
                   </div>
                 </div>
               )}
@@ -200,21 +207,22 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
             </div>
 
             {/* Section 3: Jak exportovat Excel do CSV */}
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <button
-                onClick={() => toggleSection("csv")}
-                className="w-full bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-150 p-5 flex items-center justify-between transition-colors"
-              >
-                <h3 className="text-xl font-bold text-gray-900">
-                  Jak exportovat Excel do CSV pro hromadné generování
-                </h3>
-                {openSection === "csv" ? (
-                  <ChevronUp className="w-6 h-6 text-green-600 flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-6 h-6 text-green-600 flex-shrink-0" />
-                )}
-              </button>
-              {openSection === "csv" && (
+            {canBulkGenerate && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => toggleSection("csv")}
+                  className="w-full bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-150 p-5 flex items-center justify-between transition-colors"
+                >
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Jak exportovat Excel do CSV pro hromadné generování
+                  </h3>
+                  {openSection === "csv" ? (
+                    <ChevronUp className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  )}
+                </button>
+                {openSection === "csv" && (
                 <div className="p-6 bg-white">
                   <p className="text-gray-600 mb-4">
                     Pro hromadné generování dokumentů z Excelu je potřeba soubor uložit jako CSV se středníkovým oddělovačem:
@@ -274,7 +282,8 @@ export default function HelpDialog({ isOpen, onClose }: HelpDialogProps) {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
