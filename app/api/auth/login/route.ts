@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     session.username = user.username;
     session.salutation = user.salutation;
     session.isAdmin = user.isAdmin;
+    session.canBulkGenerate = user.canBulkGenerate;
     session.isLoggedIn = true;
     await session.save();
 
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
         username: user.username,
         salutation: user.salutation,
         isAdmin: user.isAdmin,
+        canBulkGenerate: user.canBulkGenerate,
       },
     });
   } catch (error) {

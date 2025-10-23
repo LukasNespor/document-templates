@@ -27,6 +27,7 @@ export async function GET() {
       createdAt: user.createdAt,
       salutation: user.salutation,
       isAdmin: user.isAdmin,
+      canBulkGenerate: user.canBulkGenerate,
     }));
 
     return NextResponse.json({ users: sanitizedUsers });
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, password, salutation, isAdmin } = body;
+    const { username, password, salutation, isAdmin, canBulkGenerate } = body;
 
     // Validate input using centralized validation
     const validation = validateCredentials(username, password);
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       salutation: salutation || undefined,
       isAdmin: isAdmin || false,
+      canBulkGenerate: canBulkGenerate || false,
     };
 
     await saveUser(newUser);
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
         createdAt: newUser.createdAt,
         salutation: newUser.salutation,
         isAdmin: newUser.isAdmin,
+        canBulkGenerate: newUser.canBulkGenerate,
       },
     });
   } catch (error) {

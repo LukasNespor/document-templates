@@ -46,6 +46,7 @@ export interface User {
   createdAt: string;
   salutation?: string;
   isAdmin?: boolean;
+  canBulkGenerate?: boolean;
 }
 
 export interface SessionData {
@@ -54,4 +55,5 @@ export interface SessionData {
   isLoggedIn: boolean;
   salutation?: string;
   isAdmin?: boolean;
+  canBulkGenerate?: boolean;
 }
