@@ -87,8 +87,8 @@ export default function HelpDialog({ isOpen, onClose, canBulkGenerate = false }:
               2. Vybrat šablonu
             </h4>
             <p className="text-gray-600 mb-4">
-              Vyberte šablonu z postranního panelu. Aplikace automaticky rozpozná všechna
-              pole pro sloučení v dokumentu a zobrazí je.
+              Vyberte šablonu z postranního panelu. Aplikace automaticky načte všechna
+              pole z dokumentu a zobrazí je.
             </p>
 
             <h4 className="font-semibold text-gray-800 mb-2">
@@ -169,12 +169,13 @@ export default function HelpDialog({ isOpen, onClose, canBulkGenerate = false }:
                       </p>
                     </div>
 
-                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-                      <h5 className="font-semibold text-gray-800 mb-2">Tip: Systémové pole {"{{"} dnes {"}}"}</h5>
-                      <p className="text-gray-600">
-                        Pole <strong>{"{{"} dnes {"}}"}</strong> se automaticky vyplní aktuálním datem v českém formátu (např. &quot;14. října 2025&quot;).
-                        Nemusíte ho vyplňovat ručně.
-                      </p>
+                    <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">💡 Tip: Psaní složených závorek na české klávesnici</h5>
+                      <div className="text-gray-600 space-y-2 text-sm">
+                        <div>Pro napsání <strong>{"{"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">B</kbd></div>
+                        <div>Pro napsání <strong>{"}"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">N</kbd></div>
+                        <div className="text-xs text-gray-500 mt-2">(AltGr je pravá klávesa Alt)</div>
+                      </div>
                     </div>
 
                     <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
@@ -186,13 +187,12 @@ export default function HelpDialog({ isOpen, onClose, canBulkGenerate = false }:
                       </div>
                     </div>
 
-                    <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
-                      <h5 className="font-semibold text-gray-800 mb-2">💡 Tip: Psaní složených závorek na české klávesnici</h5>
-                      <div className="text-gray-600 space-y-2 text-sm">
-                        <div>Pro napsání <strong>{"{"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">B</kbd></div>
-                        <div>Pro napsání <strong>{"}"}</strong> stiskněte: <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">AltGr</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">N</kbd></div>
-                        <div className="text-xs text-gray-500 mt-2">(AltGr je pravá klávesa Alt)</div>
-                      </div>
+                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                      <h5 className="font-semibold text-gray-800 mb-2">Tip: Systémové pole {"{{"} dnes {"}}"}</h5>
+                      <p className="text-gray-600">
+                        Pole <strong>{"{{"} dnes {"}}"}</strong> se automaticky vyplní aktuálním datem v českém formátu (např. &quot;14. října 2025&quot;).
+                        Nemusíte ho vyplňovat ručně.
+                      </p>
                     </div>
 
                     <div className="bg-blue-50 rounded-lg p-4">
