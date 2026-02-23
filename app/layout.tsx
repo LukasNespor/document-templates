@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import VersionBadge from "@/components/VersionBadge";
 
 export const metadata: Metadata = {
   title: "Šablony dokumentů",
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="cs">
       <body className="antialiased">
         {children}
+        <VersionBadge />
       </body>
     </html>
   );

@@ -89,7 +89,14 @@ export function generateDocument(
 
     let result = xml.replace(splitFieldRegex, (match, content) => {
       // Extract just the text content, removing any XML tags
-      const textContent = content.replace(/<[^>]+>/g, "").trim();
+      // Remove all XML tags (even revealed after previous removals), repeatedly
+      let textContent = content;
+      let previousTextContent;
+      do {
+        previousTextContent = textContent;
+        textContent = textContent.replace(/<[^>]+>/g, "");
+      } while (textContent !== previousTextContent);
+      textContent = textContent.trim();
       const lowerFieldName = textContent.toLowerCase();
 
       // Look up the value (case-insensitive)
