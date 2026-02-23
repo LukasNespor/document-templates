@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { FileText, FolderOpen, StickyNote, Edit3, Wand2, AlertCircle, Loader2, Download, Edit2, Trash2, Upload, FileSpreadsheet } from "lucide-react";
 import { Template, FieldValue } from "@/types";
 
+const FIELD_MEMORY_KEY = "fieldMemory";
+
 interface TemplateFormProps {
   template: Template;
   onGenerate: (templateId: string, fields: FieldValue[], fileName: string) => Promise<void>;
@@ -22,11 +24,21 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize field values when template changes
+  // Initialize field values when template changes, pre-filling from remembered values
   useEffect(() => {
+    let remembered: Record<string, string> = {};
+    try {
+      const stored = sessionStorage.getItem(FIELD_MEMORY_KEY);
+      if (stored) {
+        remembered = JSON.parse(stored);
+      }
+    } catch {
+      // Ignore parse or access errors
+    }
+
     const initialValues: Record<string, string> = {};
     template.fields.forEach((field) => {
-      initialValues[field] = "";
+      initialValues[field] = remembered[field] || "";
     });
     setFieldValues(initialValues);
     setFileName("");
@@ -56,6 +68,23 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
 
     try {
       await onGenerate(template.id, fields, fileName);
+
+      // Save non-empty field values to sessionStorage after successful generation
+      try {
+        let existing: Record<string, string> = {};
+        const stored = sessionStorage.getItem(FIELD_MEMORY_KEY);
+        if (stored) {
+          existing = JSON.parse(stored);
+        }
+        for (const [field, value] of Object.entries(fieldValues)) {
+          if (value.trim()) {
+            existing[field] = value;
+          }
+        }
+        sessionStorage.setItem(FIELD_MEMORY_KEY, JSON.stringify(existing));
+      } catch {
+        // Ignore storage errors
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Nepodařilo se vygenerovat dokument"
