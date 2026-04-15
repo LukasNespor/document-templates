@@ -64,6 +64,53 @@ export function extractMergeFields(buffer: Buffer): string[] {
   return Array.from(fields);
 }
 
+export function extractDocumentText(buffer: Buffer): string {
+  const zip = new PizZip(buffer);
+  const parts: string[] = [];
+
+  const extractTextFromXml = (xml: string) => {
+    const paragraphs = xml.split(/<\/w:p>/);
+    for (const para of paragraphs) {
+      const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+      const textParts: string[] = [];
+      let match;
+      while ((match = textRegex.exec(para)) !== null) {
+        textParts.push(match[1]);
+      }
+      if (textParts.length > 0) {
+        parts.push(textParts.join(""));
+      }
+    }
+  };
+
+  try {
+    const documentXml = zip.file("word/document.xml")?.asText();
+    if (documentXml) {
+      extractTextFromXml(documentXml);
+    }
+
+    let headerIndex = 1;
+    while (true) {
+      const headerXml = zip.file(`word/header${headerIndex}.xml`)?.asText();
+      if (!headerXml) break;
+      extractTextFromXml(headerXml);
+      headerIndex++;
+    }
+
+    let footerIndex = 1;
+    while (true) {
+      const footerXml = zip.file(`word/footer${footerIndex}.xml`)?.asText();
+      if (!footerXml) break;
+      extractTextFromXml(footerXml);
+      footerIndex++;
+    }
+  } catch (error) {
+    console.error("Error extracting document text:", error);
+  }
+
+  return parts.join("\n");
+}
+
 export function generateDocument(
   templateBuffer: Buffer,
   fields: FieldValue[]

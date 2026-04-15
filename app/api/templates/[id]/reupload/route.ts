@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTemplate, updateTemplate } from "@/lib/azure-table";
 import { uploadBlob } from "@/lib/azure-blob";
-import { extractMergeFields } from "@/lib/docx-processor";
+import { extractMergeFields, extractDocumentText } from "@/lib/docx-processor";
+import { generateFieldDisplayNames } from "@/lib/ai-field-names";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function PUT(
@@ -57,6 +58,20 @@ export async function PUT(
       );
     }
 
+    // Generate AI display names for fields
+    let fieldDisplayNames: Record<string, string> | undefined;
+    if (fields.length > 0) {
+      try {
+        const documentText = extractDocumentText(buffer);
+        const names = await generateFieldDisplayNames(fields, documentText);
+        if (names) {
+          fieldDisplayNames = names;
+        }
+      } catch (error) {
+        console.error("Failed to generate field display names:", error);
+      }
+    }
+
     // Upload to Azure Blob Storage (this will overwrite the existing file)
     const fileName = `${id}.docx`;
     const blobUrl = await uploadBlob(fileName, buffer);
@@ -64,11 +79,12 @@ export async function PUT(
     // Update template metadata with new fields
     await updateTemplate(currentUser.userId, id, {
       fields,
+      fieldDisplayNames,
       blobUrl,
     });
 
     return NextResponse.json(
-      { message: "Šablona úspěšně nahrána znovu", fields },
+      { message: "Šablona úspěšně nahrána znovu", fields, fieldDisplayNames },
       { status: 200 }
     );
   } catch (error) {

@@ -5,6 +5,7 @@ export interface Template {
   group: string;
   blobUrl: string;
   fields: string[];
+  fieldDisplayNames?: Record<string, string>;
   createdAt: string;
   uploadedBy: string; // User ID who uploaded this template
 }

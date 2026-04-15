@@ -68,6 +68,7 @@ export async function saveTemplate(template: Template): Promise<void> {
     group: template.group,
     blobUrl: template.blobUrl,
     fields: JSON.stringify(template.fields),
+    fieldDisplayNames: template.fieldDisplayNames ? JSON.stringify(template.fieldDisplayNames) : "",
     createdAt: template.createdAt,
     uploadedBy: template.uploadedBy,
   };
@@ -87,6 +88,7 @@ export async function getTemplate(userId: string, id: string): Promise<Template 
       group: entity.group as string,
       blobUrl: entity.blobUrl as string,
       fields: JSON.parse(entity.fields as string),
+      fieldDisplayNames: entity.fieldDisplayNames ? JSON.parse(entity.fieldDisplayNames as string) : undefined,
       createdAt: entity.createdAt as string,
       uploadedBy: entity.uploadedBy as string,
     };
@@ -114,6 +116,7 @@ export async function getTemplatesByUser(userId: string): Promise<Template[]> {
         group: entity.group as string,
         blobUrl: entity.blobUrl as string,
         fields: JSON.parse(entity.fields as string),
+        fieldDisplayNames: entity.fieldDisplayNames ? JSON.parse(entity.fieldDisplayNames as string) : undefined,
         createdAt: entity.createdAt as string,
         uploadedBy: entity.uploadedBy as string,
       });
@@ -132,7 +135,7 @@ export async function getTemplatesByUser(userId: string): Promise<Template[]> {
 export async function updateTemplate(
   userId: string,
   id: string,
-  updates: Partial<Pick<Template, "name" | "note" | "group" | "fields" | "blobUrl">>
+  updates: Partial<Pick<Template, "name" | "note" | "group" | "fields" | "fieldDisplayNames" | "blobUrl">>
 ): Promise<void> {
   const tableClient = getTableClient();
 
@@ -146,6 +149,11 @@ export async function updateTemplate(
     // Stringify fields if it's being updated
     if (updates.fields) {
       updatedEntity.fields = JSON.stringify(updates.fields);
+    }
+
+    // Stringify fieldDisplayNames if it's being updated
+    if (updates.fieldDisplayNames !== undefined) {
+      updatedEntity.fieldDisplayNames = JSON.stringify(updates.fieldDisplayNames);
     }
 
     await tableClient.updateEntity(updatedEntity, "Merge");
