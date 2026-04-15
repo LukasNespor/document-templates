@@ -71,6 +71,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    // Extend session expiration on every authenticated request (sliding window)
+    await session.save();
     return response;
   } catch (error) {
     console.error("Middleware error:", error);
