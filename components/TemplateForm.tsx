@@ -1,10 +1,42 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FileText, FolderOpen, StickyNote, Edit3, Wand2, AlertCircle, Loader2, Download, Edit2, Trash2, Upload, FileSpreadsheet } from "lucide-react";
+import { FileText, FolderOpen, StickyNote, Edit3, Wand2, AlertCircle, Loader2, Download, Edit2, Trash2, Upload, FileSpreadsheet, Eraser } from "lucide-react";
 import { Template, FieldValue } from "@/types";
 
 const FIELD_MEMORY_KEY = "fieldMemory";
+const FORM_DRAFT_PREFIX = "formDraft_";
+
+interface FormDraft {
+  fields: Record<string, string>;
+  fileName: string;
+}
+
+function loadDraft(templateId: string): FormDraft | null {
+  try {
+    const stored = localStorage.getItem(FORM_DRAFT_PREFIX + templateId);
+    if (stored) return JSON.parse(stored) as FormDraft;
+  } catch {
+    // Ignore parse or access errors
+  }
+  return null;
+}
+
+function saveDraft(templateId: string, draft: FormDraft): void {
+  try {
+    localStorage.setItem(FORM_DRAFT_PREFIX + templateId, JSON.stringify(draft));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearDraft(templateId: string): void {
+  try {
+    localStorage.removeItem(FORM_DRAFT_PREFIX + templateId);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 interface TemplateFormProps {
   template: Template;
@@ -23,9 +55,13 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
   const [isReuploading, setIsReuploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Prevents saving a draft immediately after initialization (before the user types anything)
+  const skipNextSaveRef = useRef(true);
 
-  // Initialize field values when template changes, pre-filling from remembered values
+  // Initialize field values when template changes — draft takes priority over field memory
   useEffect(() => {
+    skipNextSaveRef.current = true;
+
     let remembered: Record<string, string> = {};
     try {
       const stored = sessionStorage.getItem(FIELD_MEMORY_KEY);
@@ -36,14 +72,35 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
       // Ignore parse or access errors
     }
 
+    const draft = loadDraft(template.id);
+
     const initialValues: Record<string, string> = {};
     template.fields.forEach((field) => {
-      initialValues[field] = remembered[field] || "";
+      initialValues[field] = draft?.fields[field] ?? remembered[field] ?? "";
     });
     setFieldValues(initialValues);
-    setFileName("");
+    setFileName(draft?.fileName ?? "");
     setError("");
   }, [template]);
+
+  // Save draft to localStorage whenever the user edits the form
+  useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    saveDraft(template.id, { fields: fieldValues, fileName });
+  }, [fieldValues, fileName, template.id]);
+
+  const handleClearForm = () => {
+    clearDraft(template.id);
+    const emptyValues: Record<string, string> = {};
+    template.fields.forEach((field) => {
+      emptyValues[field] = "";
+    });
+    setFieldValues(emptyValues);
+    setFileName("");
+  };
 
   const handleFieldChange = (field: string, value: string) => {
     setFieldValues((prev) => ({
@@ -68,6 +125,9 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
 
     try {
       await onGenerate(template.id, fields, fileName);
+
+      // Clear draft — document was successfully generated, no need to restore
+      clearDraft(template.id);
 
       // Save non-empty field values to sessionStorage after successful generation
       try {
@@ -313,11 +373,19 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
                 />
               </div>
 
-              <div className="flex items-center gap-2 mb-4">
-                <Edit3 className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-bold text-gray-800">
-                  Pole v šabloně
-                </h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-xl font-bold text-gray-800">Pole v šabloně</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearForm}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-lg transition-all"
+                >
+                  <Eraser className="w-4 h-4" />
+                  Vyčistit formulář
+                </button>
               </div>
             </>
           )}
