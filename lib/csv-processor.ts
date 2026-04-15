@@ -144,7 +144,7 @@ export function parseCsvFile(
   }
 
   // Check row limit
-  const MAX_ROWS = 200;
+  const MAX_ROWS = 500;
   if (rows.length > MAX_ROWS) {
     errors.push(
       `CSV soubor má příliš mnoho řádků (${rows.length}). Maximum: ${MAX_ROWS}`

@@ -139,9 +139,18 @@ export default function BulkGenerateDialog({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Failed to generate documents"
-        );
+        const details: string[] = Array.isArray(errorData.details)
+          ? errorData.details
+          : typeof errorData.details === "string"
+          ? [errorData.details]
+          : [];
+        if (details.length > 0) {
+          setValidationErrors(details);
+          setError(errorData.error || "Generování dokumentů selhalo");
+        } else {
+          throw new Error(errorData.error || "Generování dokumentů selhalo");
+        }
+        return;
       }
 
       // Check for warnings in headers

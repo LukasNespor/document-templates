@@ -1,5 +1,4 @@
 import PizZip from "pizzip";
-import Docxtemplater from "docxtemplater";
 import { FieldValue } from "@/types";
 
 export function extractMergeFields(buffer: Buffer): string[] {
