@@ -272,6 +272,21 @@ export default function Home() {
     }
   };
 
+  const handleRenameGroup = async (oldName: string, newName: string) => {
+    const response = await fetch("/api/templates/rename-group", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldGroup: oldName, newGroup: newName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Přejmenování skupiny selhalo");
+    }
+
+    await loadTemplates();
+  };
+
   const handleDeleteTemplate = async (template: Template) => {
     if (!confirm(`Opravdu chcete smazat šablonu "${template.name}"?`)) {
       return;
@@ -367,6 +382,7 @@ export default function Home() {
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
           onWidthChange={setSidebarWidth}
           onAddTemplate={() => setIsUploadOpen(true)}
+          onRenameGroup={handleRenameGroup}
         />
 
         {/* Main Content */}

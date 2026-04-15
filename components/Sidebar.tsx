@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp, Search, X, ChevronLeft, Upload } from "lucide-react";
+import { Menu, Folder, FolderOpen, FileText, ChevronRight, Inbox, GripVertical, ChevronsDown, ChevronsUp, Search, X, ChevronLeft, Upload, Pencil } from "lucide-react";
 import { Template, TemplateGroup } from "@/types";
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ interface SidebarProps {
   onToggle: () => void;
   onWidthChange?: (width: number) => void;
   onAddTemplate?: () => void;
+  onRenameGroup?: (oldName: string, newName: string) => Promise<void>;
 }
 
 export default function Sidebar({
@@ -22,13 +23,19 @@ export default function Sidebar({
   onToggle,
   onWidthChange,
   onAddTemplate,
+  onRenameGroup,
 }: SidebarProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sidebarWidth, setSidebarWidth] = useState(346); // 20% wider than 288px
   const [isResizing, setIsResizing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [editingGroupName, setEditingGroupName] = useState<string | null>(null);
+  const [editingGroupValue, setEditingGroupValue] = useState("");
+  const [isRenamingGroup, setIsRenamingGroup] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const groupEditInputRef = useRef<HTMLInputElement>(null);
+  const commitInProgressRef = useRef(false);
 
   const collapsedWidth = 60;
   const defaultWidth = 346;
@@ -115,6 +122,53 @@ export default function Sidebar({
     } else {
       const allGroups = new Set(groupedTemplates.map(g => g.name));
       setExpandedGroups(allGroups);
+    }
+  };
+
+  // Focus the group name input when editing starts
+  useEffect(() => {
+    if (editingGroupName !== null && groupEditInputRef.current) {
+      groupEditInputRef.current.focus();
+      groupEditInputRef.current.select();
+    }
+  }, [editingGroupName]);
+
+  const startEditingGroup = (groupName: string) => {
+    setEditingGroupName(groupName);
+    setEditingGroupValue(groupName);
+  };
+
+  const cancelEditingGroup = () => {
+    commitInProgressRef.current = false;
+    setEditingGroupName(null);
+    setEditingGroupValue("");
+  };
+
+  const commitGroupRename = async () => {
+    if (editingGroupName === null || commitInProgressRef.current) return;
+    const trimmed = editingGroupValue.trim();
+    if (!trimmed || trimmed === editingGroupName) {
+      cancelEditingGroup();
+      return;
+    }
+    commitInProgressRef.current = true;
+    setIsRenamingGroup(true);
+    try {
+      await onRenameGroup?.(editingGroupName, trimmed);
+    } finally {
+      commitInProgressRef.current = false;
+      setIsRenamingGroup(false);
+      cancelEditingGroup();
+    }
+  };
+
+  const handleGroupInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitGroupRename();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEditingGroup();
     }
   };
 
@@ -260,29 +314,59 @@ export default function Sidebar({
                   {groupedTemplates.map((group) => (
                     <div key={group.name} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                       {/* Group header */}
-                      <button
-                        onClick={() => toggleGroup(group.name)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
+                      <div className="group/grouprow flex items-center w-full hover:bg-gray-50 transition-colors">
+                        <button
+                          onClick={() => editingGroupName !== group.name && toggleGroup(group.name)}
+                          className="flex-1 flex items-center gap-2 p-3 text-left min-w-0"
+                        >
                           {expandedGroups.has(group.name) ? (
-                            <FolderOpen className="w-5 h-5 text-blue-600" />
+                            <FolderOpen className="w-5 h-5 text-blue-600 flex-shrink-0" />
                           ) : (
-                            <Folder className="w-5 h-5 text-gray-600" />
+                            <Folder className="w-5 h-5 text-gray-600 flex-shrink-0" />
                           )}
-                          <span className="font-semibold text-gray-800 text-sm">
-                            {group.name}
-                          </span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          {editingGroupName === group.name ? (
+                            <input
+                              ref={groupEditInputRef}
+                              type="text"
+                              value={editingGroupValue}
+                              onChange={(e) => setEditingGroupValue(e.target.value)}
+                              onBlur={commitGroupRename}
+                              onKeyDown={handleGroupInputKeyDown}
+                              onClick={(e) => e.stopPropagation()}
+                              maxLength={50}
+                              disabled={isRenamingGroup}
+                              className="flex-1 min-w-0 text-sm font-semibold text-gray-800 bg-white border border-blue-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            />
+                          ) : (
+                            <span className="font-semibold text-gray-800 text-sm truncate">
+                              {group.name}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
                             {group.templates.length}
                           </span>
-                        </div>
-                        <ChevronRight
-                          className={`w-4 h-4 text-gray-400 transition-transform ${
-                            expandedGroups.has(group.name) ? "rotate-90" : ""
-                          }`}
-                        />
-                      </button>
+                        </button>
+                        {onRenameGroup && group.name !== "Nezařazeno" && editingGroupName !== group.name && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startEditingGroup(group.name); }}
+                            className="p-1.5 mr-1 opacity-0 group-hover/grouprow:opacity-100 transition-opacity hover:bg-gray-200 rounded"
+                            title="Přejmenovat skupinu"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => editingGroupName !== group.name && toggleGroup(group.name)}
+                          className="pr-3 py-3"
+                          tabIndex={-1}
+                        >
+                          <ChevronRight
+                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                              expandedGroups.has(group.name) ? "rotate-90" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
 
                       {/* Group items */}
                       {expandedGroups.has(group.name) && (
