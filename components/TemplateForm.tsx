@@ -381,6 +381,7 @@ export default function TemplateForm({ template, onGenerate, onEditTemplate, onD
                 <button
                   type="button"
                   onClick={handleClearForm}
+                  tabIndex={9999}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-lg transition-all"
                 >
                   <Eraser className="w-4 h-4" />
