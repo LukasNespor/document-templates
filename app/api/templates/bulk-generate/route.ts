@@ -20,6 +20,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Bulk generation is a per-user permission. The UI hides the feature, but
+    // the endpoint is what actually enforces it.
+    if (!currentUser.canBulkGenerate) {
+      return NextResponse.json(
+        { error: "Přístup odepřen. Nemáte oprávnění pro hromadné generování." },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const templateId = formData.get("templateId") as string;
     const csvFile = formData.get("csvFile") as File;

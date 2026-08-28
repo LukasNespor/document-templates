@@ -230,5 +230,6 @@ The application implements multiple layers of security best practices:
 - **Web-Based Admin UI**: Full user management interface available to admin users through the "Manage Users" button
 - **First User Setup**: Initial user created through `/setup` page with automatic admin privileges
 - **Role-Based Access**: Admin flag controls access to user management features. It is stored in Azure Table Storage and re-read on every request, so revoking it, deleting an account, or resetting a password takes effect immediately rather than when the session cookie expires
+- **Bulk Generation Permission**: `canBulkGenerate` is enforced in `/api/templates/bulk-generate` itself, not only in the UI
 - **Admin Features**: Create/edit/delete users, change passwords, assign admin privileges
 - **User Profile**: All users can view and edit their own profile information (username, salutation)
