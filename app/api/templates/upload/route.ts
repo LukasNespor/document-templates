@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { uploadBlob } from "@/lib/azure-blob";
 import { saveTemplate } from "@/lib/azure-table";
-import { extractMergeFields, extractDocumentText } from "@/lib/docx-processor";
-import { generateFieldDisplayNames } from "@/lib/ai-field-names";
+import { extractMergeFields, extractPlaceholderContexts } from "@/lib/docx-processor";
+import { generateFieldDisplayNames, isAiFieldNamesEnabled } from "@/lib/ai-field-names";
 import { incrementTemplatesCreated } from "@/lib/azure-statistics";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -70,11 +70,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate AI display names for fields
+    // Only the context around each placeholder is sent, never the whole document
     let fieldDisplayNames: Record<string, string> | null = null;
-    if (fields.length > 0) {
+    if (fields.length > 0 && isAiFieldNamesEnabled()) {
       try {
-        const documentText = extractDocumentText(buffer);
-        fieldDisplayNames = await generateFieldDisplayNames(fields, documentText);
+        const contextSnippets = extractPlaceholderContexts(buffer);
+        fieldDisplayNames = await generateFieldDisplayNames(fields, contextSnippets);
       } catch (error) {
         console.error("Failed to generate field display names:", error);
       }

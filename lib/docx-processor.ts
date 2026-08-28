@@ -111,6 +111,55 @@ export function extractDocumentText(buffer: Buffer): string {
   return parts.join("\n");
 }
 
+// Default size of the context window kept around each placeholder
+const DEFAULT_CONTEXT_CHARS_BEFORE = 200;
+const DEFAULT_CONTEXT_CHARS_AFTER = 200;
+
+export interface PlaceholderContextOptions {
+  charsBefore?: number;
+  charsAfter?: number;
+}
+
+/**
+ * Extract only the immediate surroundings of every {{field}} placeholder.
+ * Used instead of the full document text so that content the user forgot to
+ * replace with a placeholder never leaves the application.
+ * Overlapping windows are merged, the result is a list of separate snippets.
+ */
+export function extractPlaceholderContexts(
+  buffer: Buffer,
+  options: PlaceholderContextOptions = {}
+): string[] {
+  const charsBefore = options.charsBefore ?? DEFAULT_CONTEXT_CHARS_BEFORE;
+  const charsAfter = options.charsAfter ?? DEFAULT_CONTEXT_CHARS_AFTER;
+
+  const text = extractDocumentText(buffer);
+  if (!text) {
+    return [];
+  }
+
+  const placeholderRegex = /\{\{([^}]+)\}\}/g;
+  const windows: { start: number; end: number }[] = [];
+  let match;
+
+  while ((match = placeholderRegex.exec(text)) !== null) {
+    const start = Math.max(0, match.index - charsBefore);
+    const end = Math.min(text.length, match.index + match[0].length + charsAfter);
+
+    // Matches arrive in document order, so only the last window can overlap
+    const previous = windows[windows.length - 1];
+    if (previous && start <= previous.end) {
+      previous.end = Math.max(previous.end, end);
+    } else {
+      windows.push({ start, end });
+    }
+  }
+
+  return windows
+    .map((window) => text.slice(window.start, window.end).trim())
+    .filter((snippet) => snippet.length > 0);
+}
+
 export function generateDocument(
   templateBuffer: Buffer,
   fields: FieldValue[]

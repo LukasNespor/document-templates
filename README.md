@@ -64,6 +64,23 @@ To generate a secure session secret:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
+#### Optional: AI-generated field display names
+
+`AI_FIELD_NAMES_ENABLED` controls whether Azure OpenAI is used to turn raw field names into human readable form labels. It defaults to `false`, and only the exact value `true` turns it on.
+
+```env
+AI_FIELD_NAMES_ENABLED=false
+AZURE_OPENAI_ENDPOINT=https://YOUR_RESOURCE_NAME.openai.azure.com
+AZURE_OPENAI_API_KEY=YOUR_API_KEY
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
+AZURE_OPENAI_API_VERSION=2025-01-01-preview
+```
+
+- **Disabled (default)**: no request is made to Azure OpenAI at all. Form fields are labelled with the field name from the template.
+- **Enabled**: on template upload and re-upload the application sends the list of field names plus short snippets of the text surrounding each `{{field}}` placeholder (200 characters before and after, overlapping windows merged, 4000 characters in total at most). The full document text is never sent.
+
+Keep this disabled unless the Azure OpenAI resource has modified abuse monitoring approved. Without that exception Microsoft retains prompts for up to 30 days with possible human review, regardless of the resource region.
+
 ### 4. Create Your First User
 
 When you first run the application, you'll be redirected to the setup page where you can create the initial admin user through the web interface. This first user will automatically have admin privileges and can manage other users later.

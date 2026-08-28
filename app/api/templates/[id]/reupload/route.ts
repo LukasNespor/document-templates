@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTemplate, updateTemplate } from "@/lib/azure-table";
 import { uploadBlob } from "@/lib/azure-blob";
-import { extractMergeFields, extractDocumentText } from "@/lib/docx-processor";
-import { generateFieldDisplayNames } from "@/lib/ai-field-names";
+import { extractMergeFields, extractPlaceholderContexts } from "@/lib/docx-processor";
+import { generateFieldDisplayNames, isAiFieldNamesEnabled } from "@/lib/ai-field-names";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function PUT(
@@ -59,11 +59,12 @@ export async function PUT(
     }
 
     // Generate AI display names for fields
+    // Only the context around each placeholder is sent, never the whole document
     let fieldDisplayNames: Record<string, string> | undefined;
-    if (fields.length > 0) {
+    if (fields.length > 0 && isAiFieldNamesEnabled()) {
       try {
-        const documentText = extractDocumentText(buffer);
-        const names = await generateFieldDisplayNames(fields, documentText);
+        const contextSnippets = extractPlaceholderContexts(buffer);
+        const names = await generateFieldDisplayNames(fields, contextSnippets);
         if (names) {
           fieldDisplayNames = names;
         }
