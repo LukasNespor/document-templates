@@ -3,6 +3,13 @@ import { getUserByUsername } from "@/lib/azure-users";
 import { verifyPassword, getSession } from "@/lib/auth";
 import { validateCredentials } from "@/lib/validation";
 import {
+  getClientIp,
+  isRateLimited,
+  recordFailedAttempt,
+  resetAttempts,
+  RateLimitKey,
+} from "@/lib/rate-limit";
+import {
   AUTH_ERRORS,
   AuthErrorType,
   createAuthErrorResponse,
@@ -18,9 +25,25 @@ export async function POST(request: NextRequest) {
     username = body.username || "";
     const password = body.password || "";
 
+    const clientIp = getClientIp(request);
+    const rateLimitKeys: RateLimitKey[] = [
+      { scope: "username", value: username.trim() },
+      { scope: "ip", value: clientIp },
+    ];
+
+    // Check the lockout before touching storage or bcrypt
+    if (await isRateLimited(rateLimitKeys)) {
+      logAuthAttempt(username, false, AuthErrorType.RATE_LIMITED);
+      return NextResponse.json(
+        { error: AUTH_ERRORS.TOO_MANY_ATTEMPTS },
+        { status: 429 }
+      );
+    }
+
     // Validate input format
     const validation = validateCredentials(username, password);
     if (!validation.isValid) {
+      await recordFailedAttempt(rateLimitKeys);
       return NextResponse.json(
         { error: validation.error || AUTH_ERRORS.INVALID_CREDENTIALS },
         { status: 400 }
@@ -30,6 +53,7 @@ export async function POST(request: NextRequest) {
     // Find user by username
     const user = await getUserByUsername(username.trim());
     if (!user) {
+      await recordFailedAttempt(rateLimitKeys);
       const errorMessage = createAuthErrorResponse(
         AuthErrorType.USER_NOT_FOUND,
         username
@@ -40,6 +64,7 @@ export async function POST(request: NextRequest) {
     // Verify password
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
+      await recordFailedAttempt(rateLimitKeys);
       const errorMessage = createAuthErrorResponse(
         AuthErrorType.INVALID_PASSWORD,
         username
@@ -56,6 +81,9 @@ export async function POST(request: NextRequest) {
     session.canBulkGenerate = user.canBulkGenerate;
     session.isLoggedIn = true;
     await session.save();
+
+    // Clear the counter for this username after a successful login
+    await resetAttempts([{ scope: "username", value: username.trim() }]);
 
     // Log successful authentication
     logAuthAttempt(username, true);

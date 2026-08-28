@@ -19,6 +19,7 @@ export const AUTH_ERRORS = {
   SETUP_ALREADY_COMPLETED: "Počáteční nastavení již bylo dokončeno",
   SETUP_FAILED: "Nepodařilo se dokončit počáteční nastavení",
   SERVER_ERROR: "Došlo k chybě serveru",
+  TOO_MANY_ATTEMPTS: "Příliš mnoho pokusů. Zkuste to prosím znovu později",
 } as const;
 
 /**
@@ -30,6 +31,7 @@ export enum AuthErrorType {
   VALIDATION_ERROR = "VALIDATION_ERROR",
   SESSION_ERROR = "SESSION_ERROR",
   DATABASE_ERROR = "DATABASE_ERROR",
+  RATE_LIMITED = "RATE_LIMITED",
   UNKNOWN_ERROR = "UNKNOWN_ERROR",
 }
 
@@ -102,6 +104,8 @@ export function createAuthErrorResponse(
       return AUTH_ERRORS.INVALID_CREDENTIALS;
     case AuthErrorType.VALIDATION_ERROR:
       return AUTH_ERRORS.INVALID_CREDENTIALS;
+    case AuthErrorType.RATE_LIMITED:
+      return AUTH_ERRORS.TOO_MANY_ATTEMPTS;
     default:
       return AUTH_ERRORS.LOGIN_ERROR;
   }

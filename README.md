@@ -175,6 +175,7 @@ The application implements multiple layers of security best practices to protect
 ### Security Features
 
 - **User Enumeration Prevention**: Login errors return generic messages to prevent attackers from discovering valid usernames
+- **Rate Limiting & Lockout**: 5 failed attempts within a 15 minute window lock the key for 15 minutes and the endpoint answers with HTTP 429. Attempts are counted separately per username and per client IP address, so one attacker cannot lock out every user by guessing. The check runs before the user is loaded and before bcrypt is called, and the response reveals neither whether the user exists nor how many attempts are left. Applied to `/api/auth/login`, `/api/setup/initialize` and `/api/admin/users/[id]/password`. Counters live in the `DocumentTemplateLoginAttempts` table (keys stored as SHA-256 hashes, never in plain text) so the limit holds across all serverless instances.
 - **Secure Logging**: Authentication errors and attempts are logged without exposing sensitive information
 - **Audit Trail**: All authentication attempts are logged with timestamps for security monitoring
 - **Protected Routes**: All application routes require authentication. Unauthenticated users are redirected to the login page, and API requests return 401 Unauthorized.
