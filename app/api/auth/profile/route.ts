@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Prepare updates
-    const updates: { salutation?: string; username?: string; passwordHash?: string } = {};
+    const updates: { salutation?: string; username?: string; passwordHash?: string; passwordChangedAt?: string } = {};
 
     // Update salutation if provided
     if (newSalutation !== undefined) {
@@ -99,18 +99,25 @@ export async function PATCH(request: NextRequest) {
         );
       }
       updates.passwordHash = await hashPassword(newPassword);
+      // Invalidates every session issued before this change - including one an
+      // attacker might be holding. The current session is refreshed below so
+      // the user who made the change stays logged in.
+      updates.passwordChangedAt = new Date().toISOString();
     }
 
     // Update user in database
     const updatedUser = await updateUser(userId, updates);
 
-    // Update session if username or salutation changed
-    if (updates.username || updates.salutation !== undefined) {
+    // Keep the session in sync with what was just changed
+    if (updates.username || updates.salutation !== undefined || updates.passwordChangedAt) {
       if (updates.username) {
         session.username = updatedUser.username;
       }
       if (updates.salutation !== undefined) {
         session.salutation = updatedUser.salutation;
+      }
+      if (updates.passwordChangedAt) {
+        session.passwordChangedAt = updates.passwordChangedAt;
       }
       await session.save();
     }

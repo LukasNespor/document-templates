@@ -73,7 +73,7 @@ The application's core functionality is built around key modules in the `lib/` d
   - `verifyPassword()`: Verifies password against stored hash
   - `getSession()`: Gets current session using iron-session
   - `isAuthenticated()`: Checks if user is logged in
-  - `getCurrentUser()`: Gets current user from session
+  - `getCurrentUser()`: Identifies the user from the session, then re-reads the account and its privileges from Table Storage on every request (returns null if the account was deleted or the password changed after the session was issued)
 - **session-config.ts**: Centralized session configuration
   - `sessionOptions`: Unified session configuration for iron-session used across the application
   - Requires SESSION_SECRET in every environment and fails fast if it is missing, shorter than 32 characters, or still set to the placeholder from `.env.example`
@@ -229,6 +229,6 @@ The application implements multiple layers of security best practices:
 #### User Management
 - **Web-Based Admin UI**: Full user management interface available to admin users through the "Manage Users" button
 - **First User Setup**: Initial user created through `/setup` page with automatic admin privileges
-- **Role-Based Access**: Admin flag controls access to user management features (stored in session and Azure Table Storage)
+- **Role-Based Access**: Admin flag controls access to user management features. It is stored in Azure Table Storage and re-read on every request, so revoking it, deleting an account, or resetting a password takes effect immediately rather than when the session cookie expires
 - **Admin Features**: Create/edit/delete users, change passwords, assign admin privileges
 - **User Profile**: All users can view and edit their own profile information (username, salutation)

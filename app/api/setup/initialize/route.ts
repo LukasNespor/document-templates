@@ -68,6 +68,7 @@ export async function POST(request: Request) {
       username: username.trim(),
       passwordHash,
       createdAt: new Date().toISOString(),
+      passwordChangedAt: new Date().toISOString(),
       isAdmin: true, // First user is always admin
     };
 

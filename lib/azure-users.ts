@@ -54,6 +54,7 @@ export async function saveUser(user: User): Promise<void> {
     salutation: user.salutation || "",
     isAdmin: user.isAdmin || false,
     canBulkGenerate: user.canBulkGenerate || false,
+    passwordChangedAt: user.passwordChangedAt || "",
   };
 
   await tableClient.upsertEntity(entity);
@@ -61,7 +62,7 @@ export async function saveUser(user: User): Promise<void> {
 
 export async function updateUser(
   userId: string,
-  updates: { username?: string; passwordHash?: string; salutation?: string; isAdmin?: boolean; canBulkGenerate?: boolean }
+  updates: { username?: string; passwordHash?: string; salutation?: string; isAdmin?: boolean; canBulkGenerate?: boolean; passwordChangedAt?: string }
 ): Promise<User> {
   const tableClient = getUserTableClient();
 
@@ -79,6 +80,7 @@ export async function updateUser(
     ...(updates.salutation !== undefined && { salutation: updates.salutation }),
     ...(updates.isAdmin !== undefined && { isAdmin: updates.isAdmin }),
     ...(updates.canBulkGenerate !== undefined && { canBulkGenerate: updates.canBulkGenerate }),
+    ...(updates.passwordChangedAt !== undefined && { passwordChangedAt: updates.passwordChangedAt }),
   };
 
   // Save updated user
@@ -91,6 +93,7 @@ export async function updateUser(
     salutation: updatedUser.salutation || "",
     isAdmin: updatedUser.isAdmin || false,
     canBulkGenerate: updatedUser.canBulkGenerate || false,
+    passwordChangedAt: updatedUser.passwordChangedAt || "",
   };
 
   await tableClient.upsertEntity(entity);
@@ -111,6 +114,7 @@ export async function getUserById(id: string): Promise<User | null> {
       salutation: (entity.salutation as string) || undefined,
       isAdmin: (entity.isAdmin as boolean) || false,
       canBulkGenerate: (entity.canBulkGenerate as boolean) || false,
+      passwordChangedAt: (entity.passwordChangedAt as string) || undefined,
     };
   } catch (error) {
     return null;
@@ -133,6 +137,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       salutation: (entity.salutation as string) || undefined,
       isAdmin: (entity.isAdmin as boolean) || false,
       canBulkGenerate: (entity.canBulkGenerate as boolean) || false,
+      passwordChangedAt: (entity.passwordChangedAt as string) || undefined,
     };
   }
 
@@ -178,6 +183,7 @@ export async function getAllUsers(): Promise<User[]> {
       salutation: (entity.salutation as string) || undefined,
       isAdmin: (entity.isAdmin as boolean) || false,
       canBulkGenerate: (entity.canBulkGenerate as boolean) || false,
+      passwordChangedAt: (entity.passwordChangedAt as string) || undefined,
     });
   }
 

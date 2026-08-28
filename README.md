@@ -165,6 +165,7 @@ The application implements multiple layers of security best practices to protect
   - `secure: true` - Cookies only sent over HTTPS in production
   - `sameSite: "lax"` - Protects against CSRF attacks
 - **Session Secret**: Required environment variable (`SESSION_SECRET`) must be at least 32 characters. The application refuses to start in any environment if it is missing, too short, or still set to the placeholder shipped in `.env.example` - that value is public, and a session cookie sealed with it could be forged by anyone.
+- **Session Validity**: The session cookie only identifies the user. The account and its privileges are re-read from Table Storage on every request, so a deleted account, a revoked admin flag or a password reset invalidates outstanding sessions immediately.
 
 ### Input Validation
 

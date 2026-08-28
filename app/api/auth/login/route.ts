@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     session.salutation = user.salutation;
     session.isAdmin = user.isAdmin;
     session.canBulkGenerate = user.canBulkGenerate;
+    session.passwordChangedAt = user.passwordChangedAt;
     session.isLoggedIn = true;
     await session.save();
 

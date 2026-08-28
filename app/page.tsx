@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, FileText, Upload, Sparkles, TrendingUp, FileCheck, Hash, Calendar, Clock, Info } from "lucide-react";
 import TopBar from "@/components/TopBar";
@@ -49,18 +49,7 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // Check session on mount
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  // Load templates and statistics on mount
-  useEffect(() => {
-    loadTemplates();
-    loadStatistics();
-  }, []);
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/session");
       const data = await response.json();
@@ -70,11 +59,26 @@ export default function Home() {
         setIsAdmin(data.user.isAdmin || false);
         setCanBulkGenerate(data.user.canBulkGenerate || false);
         setUserId(data.user.userId || "");
+      } else {
+        // The cookie is still present but the session is no longer valid - the
+        // account was deleted or the password changed elsewhere
+        router.push("/login");
       }
     } catch (error) {
       console.error("Failed to check session:", error);
     }
-  };
+  }, [router]);
+
+  // Check session on mount
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  // Load templates and statistics on mount
+  useEffect(() => {
+    loadTemplates();
+    loadStatistics();
+  }, []);
 
   const handleLogout = async () => {
     try {

@@ -48,6 +48,9 @@ export interface User {
   salutation?: string;
   isAdmin?: boolean;
   canBulkGenerate?: boolean;
+  // Timestamp of the last password change, used to invalidate sessions that
+  // were issued before it
+  passwordChangedAt?: string;
 }
 
 export interface SessionData {
@@ -57,4 +60,6 @@ export interface SessionData {
   salutation?: string;
   isAdmin?: boolean;
   canBulkGenerate?: boolean;
+  // Copy of the user's passwordChangedAt at the time the session was created
+  passwordChangedAt?: string;
 }

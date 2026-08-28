@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       username: trimmedUsername,
       passwordHash,
       createdAt: new Date().toISOString(),
+      passwordChangedAt: new Date().toISOString(),
       salutation: salutation || undefined,
       isAdmin: isAdmin || false,
       canBulkGenerate: canBulkGenerate || false,

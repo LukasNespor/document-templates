@@ -66,8 +66,12 @@ export async function PUT(
     }
 
     // Hash new password and update user
+    // Bumping passwordChangedAt invalidates every session issued before the reset
     const passwordHash = await hashPassword(newPassword);
-    await updateUser(id, { passwordHash });
+    await updateUser(id, {
+      passwordHash,
+      passwordChangedAt: new Date().toISOString(),
+    });
 
     await resetAttempts(rateLimitKeys);
 
