@@ -4,6 +4,8 @@ import { normalizeFilename } from "./filename-utils";
 export interface CsvRow {
   filename: string;
   fields: Record<string, string>;
+  // Line number in the source CSV, including the header line
+  rowNumber: number;
 }
 
 export interface ParsedCsvData {
@@ -127,7 +129,7 @@ export function parseCsvFile(
       }
     });
 
-    rows.push({ filename, fields });
+    rows.push({ filename, fields, rowNumber: index + 2 });
   });
 
   // Warn about duplicate filenames

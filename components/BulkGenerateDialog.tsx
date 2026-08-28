@@ -18,6 +18,30 @@ interface CsvPreview {
   totalRows: number;
 }
 
+/**
+ * Build a user facing message from the row numbers reported by the server.
+ * The server sends row numbers only - never any content of the CSV cells.
+ */
+function formatFailedRows(failedRows: unknown): string {
+  if (!Array.isArray(failedRows) || failedRows.length === 0) {
+    return "";
+  }
+
+  const rows = failedRows.filter(
+    (row): row is number => typeof row === "number"
+  );
+  if (rows.length === 0) {
+    return "";
+  }
+
+  // Czech counted plural: 1 radek, 2-4 radky, 5+ radku
+  const countLabel =
+    rows.length === 1 ? "řádek" : rows.length < 5 ? "řádky" : "řádků";
+  const listLabel = rows.length === 1 ? "řádek" : "řádky";
+
+  return `${rows.length} ${countLabel} se nepodařilo vygenerovat: ${listLabel} ${rows.join(", ")}`;
+}
+
 export default function BulkGenerateDialog({
   isOpen,
   onClose,
@@ -144,6 +168,10 @@ export default function BulkGenerateDialog({
           : typeof errorData.details === "string"
           ? [errorData.details]
           : [];
+        const failedRowsMessage = formatFailedRows(errorData.failedRows);
+        if (failedRowsMessage) {
+          details.push(failedRowsMessage);
+        }
         if (details.length > 0) {
           setValidationErrors(details);
           setError(errorData.error || "Generování dokumentů selhalo");
@@ -153,12 +181,16 @@ export default function BulkGenerateDialog({
         return;
       }
 
-      // Check for warnings in headers
+      // Some rows may have failed while the ZIP was still produced
+      let generationWarning = "";
       const warningsHeader = response.headers.get("X-Generation-Warnings");
       if (warningsHeader) {
-        const warningData = JSON.parse(warningsHeader);
-        console.warn("Generation warnings:", warningData);
-        // You could show these warnings to the user if desired
+        try {
+          const warningData = JSON.parse(warningsHeader);
+          generationWarning = formatFailedRows(warningData.failedRows);
+        } catch {
+          generationWarning = "Některé řádky se nepodařilo vygenerovat";
+        }
       }
 
       // Get filename from Content-Disposition header
@@ -186,6 +218,12 @@ export default function BulkGenerateDialog({
       // Notify parent of success
       if (onSuccess) {
         onSuccess();
+      }
+
+      // Keep the dialog open when some rows failed so the user can read which ones
+      if (generationWarning) {
+        setValidationWarnings([generationWarning]);
+        return;
       }
 
       // Close dialog on success

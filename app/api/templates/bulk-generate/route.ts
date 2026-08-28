@@ -76,12 +76,12 @@ export async function POST(request: NextRequest) {
     );
 
     // Generate documents for each row
+    // Failures are identified by CSV row number only - never by cell content,
+    // because these messages travel in a response header
     const documents: DocumentFile[] = [];
-    const generationErrors: string[] = [];
+    const failedRows: number[] = [];
 
-    for (let i = 0; i < rowsWithUniqueFilenames.length; i++) {
-      const row = rowsWithUniqueFilenames[i];
-
+    for (const row of rowsWithUniqueFilenames) {
       try {
         // Convert row fields to FieldValue array
         const fields: FieldValue[] = Object.entries(row.fields).map(
@@ -99,12 +99,12 @@ export async function POST(request: NextRequest) {
           buffer: generatedBuffer,
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Neznámá chyba";
-        generationErrors.push(
-          `Nepodařilo se vygenerovat dokument pro "${row.filename}": ${errorMessage}`
+        failedRows.push(row.rowNumber);
+        // Error details may contain field values, so they stay server-side only
+        console.error(
+          `Error generating document for CSV row ${row.rowNumber}`,
+          error
         );
-        console.error(`Error generating document for row ${i + 1}:`, error);
       }
     }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Nepodařilo se vygenerovat žádný dokument",
-          details: generationErrors,
+          failedRows,
         },
         { status: 500 }
       );
@@ -137,12 +137,12 @@ export async function POST(request: NextRequest) {
       "Content-Disposition": `attachment; filename="${zipFilename}"`,
     };
 
-    if (generationErrors.length > 0) {
+    if (failedRows.length > 0) {
       responseHeaders["X-Generation-Warnings"] = JSON.stringify({
         totalRows: rowsWithUniqueFilenames.length,
         successfulDocuments: documents.length,
-        failedDocuments: generationErrors.length,
-        errors: generationErrors,
+        failedDocuments: failedRows.length,
+        failedRows,
       });
     }
 
@@ -150,12 +150,10 @@ export async function POST(request: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
+    // The error may carry template or CSV content, so it is logged but never returned
     console.error("Bulk generate error:", error);
     return NextResponse.json(
-      {
-        error: "Generování dokumentů selhalo",
-        details: error instanceof Error ? error.message : "Neznámá chyba",
-      },
+      { error: "Generování dokumentů selhalo" },
       { status: 500 }
     );
   }
