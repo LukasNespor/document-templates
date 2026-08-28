@@ -362,11 +362,14 @@ Form values do persist in the user's own browser for convenience: a draft of the
 Logging goes to the container's stdout and stderr only. The application does not write log files and does not send logs to any external service.
 
 - Authentication attempts: timestamp, username pseudonym (HMAC-SHA256 keyed with `SESSION_SECRET`, 16 hex characters), outcome and reason. The username itself is never logged.
-- Bulk generation failures: the CSV row number only. Cell values never appear in a log message, in a response body, or in the `X-Generation-Warnings` response header.
+- Bulk generation failures: the CSV row number only. The value of a CSV cell never appears in a log message nor in the `X-Generation-Warnings` response header, because response headers are recorded by proxies, CDNs and TLS inspection gateways outside our control.
 - Unexpected errors: the error object is logged server-side; the client receives a fixed Czech message with no error details.
 - Secrets (`AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_OPENAI_API_KEY`, `SESSION_SECRET`, password hashes) are never logged and never returned in a response.
 
-The one place where user input still reaches an HTTP header by design is `Content-Disposition` on document downloads, which carries the filename the user chose. That is inherent to downloading a file.
+Two places return uploaded content to the client by design, and both are deliberate:
+
+- `Content-Disposition` on document downloads carries the filename the user chose. That is inherent to downloading a file.
+- CSV validation messages name the offending column or filename (for example a duplicate filename that will be numbered). These are error messages for the person who just uploaded that file and who needs to know what to fix; a bare row number would not tell them. They are returned in the response body of the upload request only - never in a header and never in a log.
 
 ### Retention
 
