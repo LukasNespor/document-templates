@@ -1,7 +1,13 @@
 /**
  * Centralized error handling and logging utilities for authentication
- * Ensures sensitive information is never logged or exposed to clients
+ *
+ * Passwords, session data and error internals are never logged or exposed to
+ * clients. Usernames are not logged either - they are replaced by a stable
+ * pseudonym (see hashUsernameForLogs), so attempts can still be correlated
+ * without the name itself ending up in the platform logs.
  */
+
+import { createHmac } from "crypto";
 
 /**
  * Standard authentication error messages (in Czech)
@@ -36,6 +42,21 @@ export enum AuthErrorType {
 }
 
 /**
+ * Turns a username into a stable pseudonym for logging
+ * HMAC-SHA256 over the lowercased username, keyed with SESSION_SECRET,
+ * shortened to 16 hex characters. The same username always produces the same
+ * value, so log entries can be correlated, but the name cannot be read back.
+ */
+export function hashUsernameForLogs(username: string): string {
+  const key = process.env.SESSION_SECRET || "development_only_log_pseudonym_key";
+
+  return createHmac("sha256", key)
+    .update((username || "").trim().toLowerCase())
+    .digest("hex")
+    .slice(0, 16);
+}
+
+/**
  * Safely logs authentication errors without exposing sensitive information
  * @param context - Description of where the error occurred
  * @param error - The error object
@@ -61,9 +82,10 @@ export function logAuthError(
 
 /**
  * Safely logs authentication attempts for security monitoring
- * @param username - The username (safe to log)
+ * The username itself is never logged, only its pseudonym
+ * @param username - The username, logged as a pseudonym only
  * @param success - Whether the attempt was successful
- * @param errorType - The type of error if unsuccessful
+ * @param errorType - The type of error if unsuccessful, recorded as the reason
  */
 export function logAuthAttempt(
   username: string,
@@ -72,9 +94,9 @@ export function logAuthAttempt(
 ): void {
   const logEntry = {
     timestamp: new Date().toISOString(),
-    username: username || "unknown",
-    success,
-    errorType: errorType || null,
+    usernameHash: hashUsernameForLogs(username),
+    outcome: success ? "success" : "failure",
+    reason: errorType || null,
   };
 
   // In production, you might want to send this to a security monitoring service

@@ -15,6 +15,7 @@ import {
   createAuthErrorResponse,
   logAuthError,
   logAuthAttempt,
+  hashUsernameForLogs,
 } from "@/lib/auth-errors";
 
 export async function POST(request: NextRequest) {
@@ -99,7 +100,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logAuthError("Login endpoint", error, { username });
+    logAuthError("Login endpoint", error, {
+      usernameHash: hashUsernameForLogs(username),
+    });
     return NextResponse.json(
       { error: AUTH_ERRORS.LOGIN_ERROR },
       { status: 500 }
