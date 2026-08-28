@@ -326,6 +326,52 @@ curl -sI https://<host>/api/setup/check | grep -i x-vercel-id
 
 The `x-vercel-id` header must start with `fra1`.
 
+## Data Processing / Zpracování dat
+
+What the application does with the data that passes through it.
+
+### Stored permanently
+
+| Data | Where |
+| --- | --- |
+| Uploaded .docx template files | Azure Blob Storage, container `document-templates`, one blob per template named `{uuid}.docx` |
+| Template metadata: name, group, note, field names, field display names, blob URL, creation time, owner | Azure Table Storage, table `DocumentTemplates`, partitioned per user |
+| User accounts: user ID, username, bcrypt password hash, creation time, salutation, admin and bulk-generate flags | Azure Table Storage, table `DocumentTemplateUsers` |
+| Usage statistics per user: number of templates created, documents generated, fields filled, last generation date | Azure Table Storage, table `DocumentTemplateStatistics` |
+| Failed authentication counters: SHA-256 hash of the username or IP address, attempt count, window start, lockout end | Azure Table Storage, table `DocumentTemplateLoginAttempts` |
+
+A template file is uploaded content, so whatever the user leaves inside the .docx - including text that was not replaced by a `{{field}}` placeholder - is stored in Blob Storage.
+
+### Not stored
+
+- **Generated documents.** Both `/api/templates/generate` and `/api/templates/bulk-generate` build the document in memory and stream it straight to the browser. Nothing is written to Blob Storage, Table Storage or disk.
+- **Values filled into the form.** They are sent with the generate request, used to produce the document, and discarded when the request ends. Only the *number* of fields filled reaches the statistics table, never the values.
+- **CSV files used for bulk generation.** The uploaded CSV is parsed in memory and discarded with the request.
+
+Form values do persist in the user's own browser for convenience: a draft of the current form in `localStorage` (removed once the document is generated) and previously used values in `sessionStorage` (cleared when the tab is closed). This data never leaves the browser.
+
+### What leaves the application
+
+- **Azure Blob Storage and Azure Table Storage** (West Europe) receive the data listed above.
+- **Azure OpenAI** is contacted only when `AI_FIELD_NAMES_ENABLED=true`, and only while a template is being uploaded or re-uploaded. With the flag off, no request is made at all.
+
+  When enabled, the request contains the list of field names from the template plus short snippets of text surrounding each `{{field}}` placeholder: 200 characters before and 200 characters after each occurrence, overlapping snippets merged, 4000 characters of context in total at most. Everything else - the rest of the document body, headers and footers outside those windows, and the file itself - is never sent.
+
+### What is logged and where
+
+Logging goes to the container's stdout and stderr only. The application does not write log files and does not send logs to any external service.
+
+- Authentication attempts: timestamp, username pseudonym (HMAC-SHA256 keyed with `SESSION_SECRET`, 16 hex characters), outcome and reason. The username itself is never logged.
+- Bulk generation failures: the CSV row number only. Cell values never appear in a log message, in a response body, or in the `X-Generation-Warnings` response header.
+- Unexpected errors: the error object is logged server-side; the client receives a fixed Czech message with no error details.
+- Secrets (`AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_OPENAI_API_KEY`, `SESSION_SECRET`, password hashes) are never logged and never returned in a response.
+
+The one place where user input still reaches an HTTP header by design is `Content-Disposition` on document downloads, which carries the filename the user chose. That is inherent to downloading a file.
+
+### Retention
+
+The application itself deletes nothing on a schedule and enforces no log retention. Log retention is a property of the hosting platform, not of this application - on Vercel, runtime logs are kept for 1 hour on the Hobby plan and 1 day on the Pro plan. Data in Blob and Table Storage is kept until it is deleted through the application or directly in Azure.
+
 ## License
 
 ISC
