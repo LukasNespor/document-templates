@@ -76,8 +76,7 @@ The application's core functionality is built around key modules in the `lib/` d
   - `getCurrentUser()`: Gets current user from session
 - **session-config.ts**: Centralized session configuration
   - `sessionOptions`: Unified session configuration for iron-session used across the application
-  - Validates SESSION_SECRET in production (fails fast if missing)
-  - Warns if SESSION_SECRET is less than 32 characters
+  - Requires SESSION_SECRET in every environment and fails fast if it is missing, shorter than 32 characters, or still set to the placeholder from `.env.example`
   - Configures secure cookies with httpOnly, sameSite, and 7-day expiration
 - **validation.ts**: Centralized input validation
   - `validateUsername()`: Validates username format and length (3-50 characters, alphanumeric with spaces, dots, hyphens, underscores)
@@ -204,8 +203,8 @@ The application implements multiple layers of security best practices:
   - `secure: true` (production) - Ensures cookies only sent over HTTPS
   - `sameSite: "lax"` - Protects against CSRF attacks
 - **Session Secret**:
-  - Required in production (application fails fast if missing)
-  - Minimum 32 characters recommended
+  - Required in every environment; the application fails to start without it
+  - Minimum 32 characters, and the placeholder value from `.env.example` is rejected outright because it is public
   - Centralized configuration prevents duplication
 - **Session Configuration**: Unified session options in `lib/session-config.ts` used consistently across `lib/auth.ts` and `middleware.ts`
 

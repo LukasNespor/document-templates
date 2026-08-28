@@ -1,34 +1,52 @@
 /**
  * Centralized session configuration for iron-session
  * This module ensures consistent session configuration across the application
- * and validates that SESSION_SECRET is properly configured in production
+ * and validates that SESSION_SECRET is properly configured before any session
+ * is created or read
  */
 
 import { SessionOptions } from "iron-session";
 
 /**
- * Validates SESSION_SECRET configuration at runtime
- * This is called lazily to avoid build-time failures when SESSION_SECRET isn't available
+ * The placeholder value shipped in .env.example. It is published with the
+ * source code, so a deployment still using it has no session security at all -
+ * anyone could seal their own cookie and log in as an administrator.
  */
-let hasValidated = false;
-function validateSessionSecret() {
-  if (hasValidated) return;
-  hasValidated = true;
+const INSECURE_DEFAULT_SECRET =
+  "complex_password_at_least_32_characters_long_change_this";
 
-  const sessionSecret = process.env.SESSION_SECRET;
-  const isProduction = process.env.NODE_ENV === "production";
+/**
+ * Minimum secret length. iron-session itself refuses anything shorter.
+ */
+const MIN_SESSION_SECRET_LENGTH = 32;
 
-  if (!sessionSecret && isProduction) {
+/**
+ * Validates SESSION_SECRET and fails fast when it cannot protect a session.
+ * Applies in every environment - a development session is sealed with the same
+ * mechanism as a production one, and a secret that is public is never usable.
+ */
+function validateSessionSecret(
+  secret: string | undefined
+): asserts secret is string {
+  if (!secret) {
     throw new Error(
-      "SESSION_SECRET environment variable is required in production. " +
-      "Please set a secure random string of at least 32 characters."
+      "SESSION_SECRET environment variable is required. " +
+      "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
   }
 
-  if (sessionSecret && sessionSecret.length < 32) {
-    console.warn(
-      "WARNING: SESSION_SECRET should be at least 32 characters long for security. " +
-      `Current length: ${sessionSecret.length} characters.`
+  if (secret === INSECURE_DEFAULT_SECRET) {
+    throw new Error(
+      "SESSION_SECRET is still set to the placeholder from .env.example. " +
+      "That value is public, so session cookies sealed with it can be forged. " +
+      "Generate your own secret before starting the application."
+    );
+  }
+
+  if (secret.length < MIN_SESSION_SECRET_LENGTH) {
+    throw new Error(
+      `SESSION_SECRET must be at least ${MIN_SESSION_SECRET_LENGTH} characters long. ` +
+      `Current length: ${secret.length} characters.`
     );
   }
 }
@@ -42,8 +60,10 @@ function getSessionOptions(): SessionOptions {
   const sessionSecret = process.env.SESSION_SECRET;
   const isProduction = process.env.NODE_ENV === "production";
 
+  validateSessionSecret(sessionSecret);
+
   return {
-    password: sessionSecret || "complex_password_at_least_32_characters_long_change_this",
+    password: sessionSecret,
     cookieName: "word_templates_session",
     cookieOptions: {
       secure: isProduction,
@@ -56,31 +76,28 @@ function getSessionOptions(): SessionOptions {
 
 /**
  * Lazy-initialized session options
- * Uses Proxy to validate SESSION_SECRET only when actually accessed at runtime
+ * Uses Proxy to validate SESSION_SECRET only when actually accessed at runtime.
+ * Nothing is cached until validation passes, so a misconfigured deployment keeps
+ * failing on every request instead of succeeding once.
  */
 let cachedOptions: SessionOptions | null = null;
 
+function resolveOptions(): SessionOptions {
+  if (!cachedOptions) {
+    cachedOptions = getSessionOptions();
+  }
+  return cachedOptions;
+}
+
 export const sessionOptions = new Proxy({} as SessionOptions, {
   get(_target, prop) {
-    if (!cachedOptions) {
-      validateSessionSecret();
-      cachedOptions = getSessionOptions();
-    }
-    return cachedOptions[prop as keyof SessionOptions];
+    return resolveOptions()[prop as keyof SessionOptions];
   },
   ownKeys(_target) {
-    if (!cachedOptions) {
-      validateSessionSecret();
-      cachedOptions = getSessionOptions();
-    }
-    return Reflect.ownKeys(cachedOptions);
+    return Reflect.ownKeys(resolveOptions());
   },
   getOwnPropertyDescriptor(_target, prop) {
-    if (!cachedOptions) {
-      validateSessionSecret();
-      cachedOptions = getSessionOptions();
-    }
-    return Reflect.getOwnPropertyDescriptor(cachedOptions, prop);
+    return Reflect.getOwnPropertyDescriptor(resolveOptions(), prop);
   }
 });
 
