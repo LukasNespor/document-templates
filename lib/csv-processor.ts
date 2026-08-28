@@ -103,7 +103,9 @@ export function parseCsvFile(
   // Process rows
   const rows: CsvRow[] = [];
   const seenFilenames = new Set<string>();
-  const duplicateFilenames: string[] = [];
+  // Duplicates are reported by row number - the filename itself is a CSV cell
+  // value and must not travel back to the client
+  const duplicateRowNumbers: number[] = [];
 
   parseResult.data.forEach((row, index) => {
     const filename = sanitizeFilename(row[filenameColumn] || "");
@@ -116,7 +118,7 @@ export function parseCsvFile(
 
     // Check for duplicate filenames
     if (seenFilenames.has(filename)) {
-      duplicateFilenames.push(filename);
+      duplicateRowNumbers.push(index + 2);
     }
     seenFilenames.add(filename);
 
@@ -133,9 +135,9 @@ export function parseCsvFile(
   });
 
   // Warn about duplicate filenames
-  if (duplicateFilenames.length > 0) {
+  if (duplicateRowNumbers.length > 0) {
     warnings.push(
-      `Nalezeny duplicitní názvy souborů (budou očíslovány): ${[...new Set(duplicateFilenames)].join(", ")}`
+      `Nalezeny duplicitní názvy souborů (budou očíslovány) na řádcích: ${duplicateRowNumbers.join(", ")}`
     );
   }
 
