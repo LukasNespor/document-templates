@@ -287,6 +287,27 @@ This application can be deployed to any platform that supports Next.js or Docker
 
 Make sure to set the environment variables in your deployment platform.
 
+### Vercel Function Region / Region funkcí na Vercelu
+
+The function region is part of the repository configuration, not just a dashboard setting. `vercel.json` pins it:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["fra1"]
+}
+```
+
+- **Reason**: EU data residency. Routes such as `/api/templates/generate` and `/api/templates/bulk-generate` process user data in memory, so the execution region matters. Azure Blob Storage, Table Storage and Azure OpenAI all live in West Europe, and `fra1` (Frankfurt) is the closest Vercel region.
+- **Do not** let the region fall back to the Vercel default `iad1` (Washington, D.C., USA). Removing `regions` from `vercel.json`, or deploying from the CLI with an explicit different region, silently moves processing outside the EU.
+- **Verify after every deployment**:
+
+```bash
+curl -sI https://<host>/api/setup/check | grep -i x-vercel-id
+```
+
+The `x-vercel-id` header must start with `fra1`.
+
 ## License
 
 ISC
